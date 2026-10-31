@@ -15,12 +15,16 @@ export type ModelSpec = {
   anchor?: "center" | "ground";
 };
 
-export type ModelName = "airliner" | "tower" | "drone" | "jetbridge" | "tug";
+export type ModelName = "airliner" | "radarMast" | "quadcopter" | "hangar" | "jetbridge";
 
-// Example once the files exist:
-//   airliner: { src: "/models/airliner.glb", size: 3.4, rotation: [0, -Math.PI / 2, 0], anchor: "center" },
-//   tower: { src: "/models/tower.glb", size: 9.5 },
-//   drone: { src: "/models/drone.glb", size: 1.2, anchor: "center" },
-//   jetbridge: { src: "/models/jetbridge.glb", size: 2.5 },
-//   tug: { src: "/models/tug.glb", size: 1.0 },
-export const MODELS: Partial<Record<ModelName, ModelSpec>> = {};
+export const MODELS: Partial<Record<ModelName, ModelSpec>> = {
+  airliner: {
+    src: "/models/Airliner-opt.glb",
+    size: 3.4,
+    rotation: [0, -Math.PI / 2, 0],
+    anchor: "center",
+  },
+  radarMast: { src: "/models/RadarMast-opt.glb", size: 9.5 },
+  quadcopter: { src: "/models/Quadcopter-opt.glb", size: 1.2, anchor: "center" },
+  hangar: { src: "/models/Hangar-opt.glb", size: 18 },
+};

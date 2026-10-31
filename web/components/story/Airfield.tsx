@@ -115,7 +115,7 @@ function Drone({ refObj }: { refObj: React.RefObject<THREE.Group | null> }) {
   });
   return (
     <group ref={refObj}>
-      <Model name="drone" scale={0.6}>
+      <Model name="quadcopter" scale={0.6}>
         <mesh>
           <boxGeometry args={[0.5, 0.12, 0.5]} />
           <meshStandardMaterial color="#444" />
@@ -264,10 +264,14 @@ function Scene({ run }: { run: Run | null }) {
       ))}
 
       {/* Terminal and gates */}
-      <mesh position={[0, 1.5, -16]}>
-        <boxGeometry args={[36, 3, 6]} />
-        <meshStandardMaterial color="#1f242d" />
-      </mesh>
+      <group position={[0, 0, -16]}>
+        <Model name="hangar">
+          <mesh position={[0, 3, 0]}>
+            <boxGeometry args={[18, 6, 8]} />
+            <meshStandardMaterial color="#1f242d" />
+          </mesh>
+        </Model>
+      </group>
       {gateIds.map((id) => {
         const x = gateX(id);
         const isPlanned = id === planned;
@@ -299,7 +303,7 @@ function Scene({ run }: { run: Run | null }) {
 
       {/* Tower = ATC */}
       <group position={[22, 0, -8]}>
-        <Model name="tower" scale={1.2}>
+        <Model name="radarMast" scale={1.2}>
           <mesh position={[0, 4, 0]}>
             <cylinderGeometry args={[0.6, 0.9, 8, 12]} />
             <meshStandardMaterial color="#2b313b" />
