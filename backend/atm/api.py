@@ -6,6 +6,7 @@
 from __future__ import annotations
 
 from pathlib import Path
+from typing import Literal
 
 from dotenv import load_dotenv
 from fastapi import FastAPI, HTTPException
@@ -34,7 +35,7 @@ class RunRequest(BaseModel):
 
 class ApproveRequest(BaseModel):
     approver: str = "Station duty manager"
-    decision: str = "APPROVE"  # APPROVE | OVERRIDE
+    decision: Literal["APPROVE", "OVERRIDE"] = "APPROVE"
     note: str = ""
 
 
@@ -78,10 +79,17 @@ def approve(run_id: str, req: ApproveRequest):
     r = RUNS.get(run_id)
     if not r:
         raise HTTPException(404, "unknown run")
+    if r.get("approval"):
+        raise HTTPException(409, "run already has a decision")
+    if r["outcome"]["candidate"] is None:
+        raise HTTPException(409, "escalated run: no plan to approve; decide outside the system")
+    if req.decision == "OVERRIDE" and not req.note.strip():
+        raise HTTPException(422, "an override needs a note saying why")
     log = ConsensusLog(run_id)
     log.entries = r["log"]
-    log.append("APPROVAL", req.model_dump(), sender="HUMAN")
-    log.write(RUNS_DIR / f"{run_id}.jsonl")
+    entry = log.append("APPROVAL", req.model_dump(), sender="HUMAN")
+    log.append_to(RUNS_DIR / f"{run_id}.jsonl", entry)
     r["chain_valid"], r["chain_first_bad"] = verify(log.entries)
+    r["chain_head"] = entry["hash"]
     r["approval"] = req.model_dump()
     return {"ok": True, "chain_valid": r["chain_valid"], "entry": log.entries[-1]}

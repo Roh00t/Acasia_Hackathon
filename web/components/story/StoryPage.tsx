@@ -10,7 +10,7 @@ import { BEATS, beatAt } from "@/lib/beats";
 import { director, stepDirector } from "@/lib/sceneDirector";
 import { SUBSYSTEMS, type Batch, type Run, type Subsystem } from "@/lib/types";
 import { CandidateGrid } from "@/components/console/CandidateGrid";
-import { HashChain, LevelBadge, MessageCard, PlanTable, SyntheticNote } from "@/components/console/RunParts";
+import { HashChain, LevelBadge, MessageCard, PlanTable, SyntheticNote, agentFacts, messageSubject } from "@/components/console/RunParts";
 
 gsap.registerPlugin(useGSAP, ScrollTrigger);
 
@@ -223,7 +223,10 @@ export default function StoryPage() {
           <Heading lines={["Round 1.", "Each side ranks."]} />
           {r1 && (
             <div data-body className="mt-6 grid gap-2 md:grid-cols-3">
-              {r1.messages.map((m) => <MessageCard key={m.agent} m={m} />)}
+              {run && r1.messages.map((m) => {
+                const subject = messageSubject(run, m, null);
+                return <MessageCard key={m.agent} m={m} facts={agentFacts(m.agent, subject)} subject={subject?.id} />;
+              })}
             </div>
           )}
           <p data-body className="label mt-3">Three separate calls. Each agent sees only its own organisation&apos;s data.</p>
@@ -236,7 +239,7 @@ export default function StoryPage() {
               <div key={r.round}>
                 <div className="label mb-1">Round {r.round} · coordinator proposes {r.proposal?.id}</div>
                 <div className="grid gap-2 md:grid-cols-3">
-                  {r.messages.map((m) => <MessageCard key={m.agent} m={m} />)}
+                  {r.messages.map((m) => <MessageCard key={m.agent} m={m} facts={agentFacts(m.agent, r.proposal)} subject={r.proposal?.id} />)}
                 </div>
               </div>
             ))}

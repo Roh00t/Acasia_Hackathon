@@ -9,6 +9,7 @@ from __future__ import annotations
 
 import json
 import os
+import re
 import time
 from typing import Literal
 
@@ -21,6 +22,27 @@ from .views import domain_candidates
 
 MODEL = os.environ.get("ATM_MODEL", "claude-haiku-5-5")
 CANDIDATES_SHOWN = 25
+# A number not preceded by a letter, digit or dot, so ids like S18-A3 don't count.
+NUMBER = re.compile(r"(?<![\w.])-?\d+(?:\.\d+)?")
+
+
+def unverified_numbers(reason: str, shown: dict) -> list[str]:
+    """Numbers quoted in an agent's reason that appear nowhere in the data it was shown.
+
+    The plan is always re-checked by the validators; this only flags prose a duty
+    manager should not take on trust (OWASP LLM09). Small counts (0-3) are ignored.
+    """
+    known = [float(x) for x in NUMBER.findall(json.dumps(shown, default=str))]
+    flagged = []
+    for text in NUMBER.findall(reason):
+        x = float(text)
+        if abs(x) <= 3:
+            continue
+        tol = 0.051 if "." in text else 0.5
+        if not any(abs(v - x) <= tol for v in known):
+            flagged.append(text)
+    return flagged
+
 
 
 class LLMReply(BaseModel):
@@ -80,6 +102,7 @@ class LLMAgent:
                 if proposal_id is not None and r.decision == "RANK":
                     raise ValueError("rounds 2-3 require ACCEPT or REJECT")
                 self.last_meta["latency_s"] = round_(time.monotonic() - t0)
+                self.last_meta["unverified_numbers"] = unverified_numbers(r.reason, task)
                 return AgentMessage(agent=self.name, round=round, decision=r.decision, candidate_id=proposal_id,
                                     ranking=r.ranking[:10], reason_code=r.reason_code, reason=r.reason[:400],
                                     counter=r.counter if r.decision == "REJECT" else None,

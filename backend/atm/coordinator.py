@@ -21,15 +21,16 @@ from .agents.rules import RuleAgent
 from .agents.views import domain_state
 from .baseline import fcfs, uncoordinated
 from .candidates import enumerate_candidates
-from .log import ConsensusLog, verify
+from .log import ConsensusLog, chain_alg, verify
 from .scenario import build_scenario
 from .schemas import AGENTS, AgentMessage, Assessment, ReasonCode, Scenario
-from .validators import assess_all, total_cost
+from .validators import assess, assess_all, total_cost
 
 MAX_ROUNDS = 3
 RUNS_DIR = Path(__file__).resolve().parents[2] / "runs"
 OUTCOME_METRICS = ("hold_min", "fuel_hold_kg", "missed_pax", "overtime_min", "gate_change",
-                   "departure_delay_min", "knock_on_min")
+                   "departure_delay_min", "knock_on_min", "fuel_margin_min", "turbulence",
+                   "window_load", "wake_margin_min")
 
 
 def make_agents(live: bool) -> dict:
@@ -127,6 +128,7 @@ def run(row_id: int, emergency: bool = False, live: bool = False, inject_unsafe:
     rounds: list[dict] = []
     vetoes: list[dict] = []
     stand_ins = 0
+    metas: dict[tuple[str, int], dict] = {}
 
     def veto(agent: str, rnd: int, cid: str) -> None:
         a = by_id.get(cid)
@@ -141,6 +143,7 @@ def run(row_id: int, emergency: bool = False, live: bool = False, inject_unsafe:
         msg = ag.rank(rnd, states[agent], feasible) if proposal is None else \
             ag.respond(rnd, states[agent], feasible, proposal)
         meta = dict(getattr(ag, "last_meta", {}) or {})
+        metas[(agent, rnd)] = meta
         if msg.level == "L1" and getattr(ag, "level", "L1") == "L0":
             stand_ins += 1
         # Re-validate everything the agent named. Illegal ids are vetoed, never used.
@@ -165,7 +168,8 @@ def run(row_id: int, emergency: bool = False, live: bool = False, inject_unsafe:
                     for n, m in r1.items()}
         scores = borda(rankings, sorted(feasible_ids), by_id)
         order = sorted(feasible_ids, key=lambda c: (scores[c], total_cost(by_id[c]), c))
-        rounds.append({"round": 1, "proposal": None, "messages": [r1[n].model_dump(mode="json") for n in AGENTS]})
+        rounds.append({"round": 1, "proposal": None,
+                       "messages": [{**r1[n].model_dump(mode="json"), "meta": metas.get((n, 1), {})} for n in AGENTS]})
 
         proposal, tried, consensus, rounds_used = by_id[order[0]], set(), False, 1
         for rnd in (2, 3):
@@ -173,7 +177,8 @@ def run(row_id: int, emergency: bool = False, live: bool = False, inject_unsafe:
             log.append("PROPOSAL", _summary(proposal), round=rnd)
             msgs = {n: ask(n, rnd, proposal) for n in AGENTS}
             rounds.append({"round": rnd, "proposal": _summary(proposal),
-                           "messages": [msgs[n].model_dump(mode="json") for n in AGENTS]})
+                           "messages": [{**msgs[n].model_dump(mode="json"), "meta": metas.get((n, rnd), {})}
+                                        for n in AGENTS]})
             rounds_used = rnd
             if all(m.decision == "ACCEPT" for m in msgs.values()):
                 consensus = True
@@ -197,11 +202,20 @@ def run(row_id: int, emergency: bool = False, live: bool = False, inject_unsafe:
         else:
             chosen = min(feasible, key=lambda a: (total_cost(a), a.candidate.id))
             level, action = "L2", "FALLBACK: no consensus within 3 rounds; lowest weighted cost among feasible options"
-        # Final safety gate: the chosen plan is re-validated from scratch.
-        assert chosen.feasible, "chosen candidate failed validation"
-        outcome = {"level": level, "consensus": consensus, "rounds_used": rounds_used,
-                   "candidate": _summary(chosen), "checks": {d: c.model_dump() for d, c in chosen.checks.items()},
-                   "action": action}
+        # Final safety gate: re-run every validator on the chosen plan from scratch. An explicit
+        # check, not an assert, so it survives `python -O`. A failure escalates instead of acting.
+        recheck = assess(s, chosen.candidate)
+        if recheck.feasible:
+            outcome = {"level": level, "consensus": consensus, "rounds_used": rounds_used,
+                       "candidate": _summary(recheck),
+                       "checks": {d: c.model_dump() for d, c in recheck.checks.items()}, "action": action}
+        else:
+            failed = {d: c.model_dump() for d, c in recheck.checks.items() if not c.ok}
+            log.append("VETO", {"agent": "COORDINATOR", "candidate": chosen.candidate.id, "failed": failed},
+                       sender="VALIDATOR", round=rounds_used)
+            outcome = {"level": "L3", "consensus": False, "rounds_used": rounds_used, "candidate": None,
+                       "action": f"ESCALATE: chosen plan {chosen.candidate.id} failed final re-validation; "
+                                 "duty manager decides."}
 
     base = fcfs(s, assessments)
     outcome["baseline_fcfs"] = _summary(base) if base else None
@@ -226,6 +240,7 @@ def run(row_id: int, emergency: bool = False, live: bool = False, inject_unsafe:
         "rounds": rounds, "vetoes": vetoes, "stand_ins": stand_ins,
         "unsafe_candidate": unsafe.candidate.id if unsafe else None,
         "outcome": outcome, "log": log.entries, "chain_valid": chain_ok, "chain_first_bad": bad,
+        "chain_alg": chain_alg(), "chain_head": log.entries[-1]["hash"],
     }
     if write:
         log.write(RUNS_DIR / f"{run_id}.jsonl")

@@ -9,7 +9,28 @@ export function AgentTag({ agent }: { agent: AgentMessage["agent"] }) {
   );
 }
 
-export function MessageCard({ m }: { m: AgentMessage }) {
+// The validator-computed numbers each organisation cares about, so the duty manager
+// reads code-checked figures beside the agent's prose (OWASP LLM09).
+const FACTS: Record<AgentMessage["agent"], [string, string, string][]> = {
+  ATC: [["knock_on_min", "knock-on", "min"], ["wake_margin_min", "wake margin", "min"], ["window_load", "load", "× cap"]],
+  PILOT: [["fuel_margin_min", "fuel margin", "min"], ["hold_min", "hold", "min"], ["turbulence", "turbulence", ""], ["missed_pax", "missed", "pax"]],
+  GROUND: [["overtime_min", "overtime", "min"], ["gate_change", "gate change", ""], ["departure_delay_min", "next dep. delay", "min"]],
+};
+
+export function agentFacts(agent: AgentMessage["agent"], c: CandidateSummary | null | undefined): string[] {
+  if (!c) return [];
+  return FACTS[agent]
+    .filter(([k]) => c.metrics[k] !== undefined)
+    .map(([k, label, unit]) => `${label} ${c.metrics[k]}${unit ? ` ${unit}` : ""}`);
+}
+
+/** The candidate a message is about: the proposal it answers, or its top-ranked pick. */
+export function messageSubject(run: Run, m: AgentMessage, proposal: CandidateSummary | null): CandidateSummary | null {
+  if (proposal) return proposal;
+  return run.candidates.feasible_list.find((c) => c.id === m.ranking[0]) ?? null;
+}
+
+export function MessageCard({ m, facts = [], subject }: { m: AgentMessage; facts?: string[]; subject?: string | null }) {
   const tone = m.decision === "ACCEPT" ? "text-ok" : m.decision === "REJECT" ? "text-crimson" : "text-primary";
   return (
     <div className="border-l-2 bg-slate/80 px-3 py-2" style={{ borderColor: AGENT_COLOR[m.agent] }}>
@@ -25,6 +46,21 @@ export function MessageCard({ m }: { m: AgentMessage }) {
       )}
       {m.counter && <div className="mt-1 font-mono text-xs text-pilot">counter → {m.counter}</div>}
       <p className="mt-1 text-xs leading-snug text-muted">{m.reason}</p>
+      {facts.length > 0 && (
+        <div className="mt-2 border-t pt-1 font-mono text-[10px] text-primary/80" title="Computed by the validators, not by the agent">
+          <span className="text-muted">checked{subject ? ` · ${subject}` : ""}: </span>{facts.join(" · ")}
+        </div>
+      )}
+      {m.meta?.unverified_numbers && m.meta.unverified_numbers.length > 0 && (
+        <div className="mt-1 font-mono text-[10px] text-pilot">
+          Not in this agent&apos;s data: {m.meta.unverified_numbers.join(", ")}. Trust the checked numbers.
+        </div>
+      )}
+      {m.meta?.fallback_reason && (
+        <div className="mt-1 font-mono text-[10px] text-crimson" title={m.meta.fallback_reason}>
+          LLM reply rejected, rule agent stood in: {m.meta.fallback_reason.slice(0, 90)}
+        </div>
+      )}
     </div>
   );
 }
@@ -107,6 +143,11 @@ export function HashChain({ run, max = 12 }: { run: Run; max?: number }) {
       <span className={`label ml-2 ${run.chain_valid ? "text-ok" : "text-crimson"}`}>
         chain {run.chain_valid ? "valid" : "BROKEN"}
       </span>
+      {run.chain_alg && (
+        <span className="label ml-2" title={run.chain_head}>
+          {run.chain_alg === "hmac-sha256" ? "HMAC-keyed" : "unkeyed SHA-256"} · head {run.chain_head?.slice(0, 10)}
+        </span>
+      )}
     </div>
   );
 }

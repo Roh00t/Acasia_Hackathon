@@ -15,7 +15,7 @@ scheduling or legality checks". Never let an agent's output reach the plan witho
 | Enumerate options (2-min slots × 8 gates + divert) | code | `backend/atm/candidates.py` |
 | Wake separation, arrival cap, runway closure, taxiway, fuel reserve, turbulence, gate conflict | code | `backend/atm/validators.py` |
 | Rank / accept / reject / counter among legal options | 3 separate agents | `backend/atm/agents/` |
-| ≤3 rounds, veto illegal ids, L2/L3 fallback | code | `backend/atm/coordinator.py` |
+| ≤3 rounds, veto illegal ids, L2/L3 fallback, final re-validation (no asserts) | code | `backend/atm/coordinator.py` |
 | Hash-chained consensus log | code | `backend/atm/log.py` |
 | Final approval | human (duty manager) | `/console` Approve button |
 
@@ -82,6 +82,7 @@ Military airfields: one future-scope line only.
 ## Repo hygiene
 
 - `data/flights.csv` (592 MB) is gitignored; only `data/scenarios.csv` (3,000 rows, no October) is committed.
-- Keys live in `.env` (gitignored); copy `.env.example`.
+- Keys live in `.env` (gitignored); copy `.env.example`. Set `ATM_LOG_KEY` so the consensus log is HMAC-keyed;
+  without it the chain is plain SHA-256 and only detects edits to single lines.
 - Raw Meshy/OpenGen exports go in `assets/raw/` (gitignored); `cd web && npm run models:optimize`, then register
   the file in `web/lib/models.ts`. The scene falls back to primitives for any missing model.

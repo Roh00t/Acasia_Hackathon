@@ -5,7 +5,7 @@ import { useEffect, useState } from "react";
 import { approveRun, listScenarios, startRun, API_URL, type ScenarioRow } from "@/lib/api";
 import { AGENTS, type Run } from "@/lib/types";
 import { CandidateGrid } from "@/components/console/CandidateGrid";
-import { AgentTag, HashChain, LevelBadge, MessageCard, PlanTable, SyntheticNote } from "@/components/console/RunParts";
+import { AgentTag, HashChain, LevelBadge, MessageCard, PlanTable, SyntheticNote, agentFacts, messageSubject } from "@/components/console/RunParts";
 
 export default function ConsolePage() {
   const [rows, setRows] = useState<ScenarioRow[]>([]);
@@ -16,6 +16,7 @@ export default function ConsolePage() {
   const [run, setRun] = useState<Run | null>(null);
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [note, setNote] = useState("");
 
   useEffect(() => {
     listScenarios().then(setRows).catch(() => setError(`Backend not reachable at ${API_URL}. Start it with: uv run uvicorn atm.api:app --port 8010`));
@@ -35,9 +36,21 @@ export default function ConsolePage() {
 
   async function decide(decision: "APPROVE" | "OVERRIDE") {
     if (!run) return;
-    const res = await approveRun(run.run_id, decision);
-    setRun({ ...run, chain_valid: res.chain_valid, approval: { approver: "Station duty manager", decision, note: "" },
-             log: [...run.log, res.entry as Run["log"][number]] });
+    if (decision === "OVERRIDE" && !note.trim()) {
+      setError("Add a note saying why you are overriding the plan.");
+      return;
+    }
+    try {
+      const res = await approveRun(run.run_id, decision, note.trim());
+      const entry = res.entry as Run["log"][number];
+      setRun({ ...run, chain_valid: res.chain_valid, chain_head: entry.hash,
+               approval: { approver: "Station duty manager", decision, note: note.trim() },
+               log: [...run.log, entry] });
+      setNote("");
+      setError(null);
+    } catch (e) {
+      setError(String(e));
+    }
   }
 
   const s = run?.scenario;
@@ -137,7 +150,10 @@ export default function ConsolePage() {
                   Round {r.round}{r.proposal ? ` · coordinator proposes ${r.proposal.id}` : " · rank and red lines"}
                 </div>
                 <div className="grid gap-2 md:grid-cols-3">
-                  {r.messages.map((m) => <MessageCard key={m.agent} m={m} />)}
+                  {r.messages.map((m) => {
+                    const subject = messageSubject(run, m, r.proposal);
+                    return <MessageCard key={m.agent} m={m} facts={agentFacts(m.agent, subject)} subject={subject?.id} />;
+                  })}
                 </div>
               </div>
             ))}
@@ -161,21 +177,32 @@ export default function ConsolePage() {
                   ]}
                 />
               </div>
-              <div className="mt-4 flex items-center gap-2">
+              <div className="mt-4 flex flex-wrap items-center gap-2">
                 {run.approval ? (
                   <span className={`font-mono text-sm ${run.approval.decision === "APPROVE" ? "text-ok" : "text-pilot"}`}>
-                    {run.approval.decision} by {run.approval.approver} (logged)
+                    {run.approval.decision} by {run.approval.approver} (logged){run.approval.note ? `: ${run.approval.note}` : ""}
+                  </span>
+                ) : !run.outcome.candidate ? (
+                  <span className="font-mono text-sm text-crimson">
+                    Escalated: no legal plan to approve. Decide with ATC outside the system.
                   </span>
                 ) : (
                   <>
                     <button onClick={() => decide("APPROVE")} className="border border-ok px-3 py-1 font-mono text-xs text-ok">Approve plan</button>
+                    <input
+                      id="override-note"
+                      value={note}
+                      onChange={(e) => setNote(e.target.value)}
+                      placeholder="Override note (required)"
+                      className="min-w-0 flex-1 border bg-carbon px-2 py-1 font-mono text-xs"
+                    />
                     <button onClick={() => decide("OVERRIDE")} className="border border-pilot px-3 py-1 font-mono text-xs text-pilot">Override</button>
                   </>
                 )}
               </div>
             </div>
             <div className="border p-4">
-              <div className="label mb-2">Consensus log · {run.log.length} entries · SHA-256 chained</div>
+              <div className="label mb-2">Consensus log · {run.log.length} entries · {run.chain_alg === "hmac-sha256" ? "HMAC-SHA256" : "SHA-256"} chained</div>
               <HashChain run={run} max={20} />
             </div>
           </div>

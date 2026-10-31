@@ -30,6 +30,7 @@ export type AgentMessage = {
   counter: string | null;
   red_lines: string[];
   level: "L0" | "L1";
+  meta?: { model?: string; attempts?: number; fallback_reason?: string | null; unverified_numbers?: string[] };
 };
 
 export type LogEntry = {
@@ -99,6 +100,8 @@ export type Run = {
   };
   log: LogEntry[];
   chain_valid: boolean;
+  chain_alg?: "hmac-sha256" | "sha256";
+  chain_head?: string;
   approval?: { approver: string; decision: string; note: string };
 };
 
