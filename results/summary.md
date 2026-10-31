@@ -176,3 +176,27 @@ uv run pytest                                                     # 27 tests inc
 uv run python -m atm.faults                                       # results/faults.md + faults.json, offline
 ATM_MODEL=claude-haiku-5-5 uv run python ../results/nondeterminism.py   # ~150 Haiku calls, ≈$0.05 ESTIMATE
 ```
+
+---
+
+## Update 31 Oct, 14:35: after adding the ground-equipment failure (Routine)
+
+Routine now also takes one free gate out of service (failed jet bridge or ground power unit, SYNTHETIC), so all
+three disruptions named in the brief are covered: runway closure (Emergency), weather (Weather), ground
+equipment failure (Routine). The fault uses its own seeded RNG stream; Weather and Emergency scenarios are
+byte-for-byte unchanged (offline batch identical).
+
+| Re-run | Before | After |
+| --- | --- | --- |
+| Routine live batch, `claude-opus-5-5`, same 20 rows | 100% consensus, L0 ×20, mean rounds 2.05 | **100% consensus, L0 ×20, mean rounds 2.00**, 0 unsafe, 0 stand-ins |
+| Routine live cost / latency (ESTIMATE) | $0.0686 / 21.0 s per negotiation | $0.0579 / 18.9 s per negotiation (≈ $1.16 for 20) |
+| Routine offline batch (50 rows, rule agents) | 98% consensus | **96%** (L1 ×48, L2 ×2), 0 unsafe |
+| Routine negotiated vs FCFS, hold min (MODELLED) | 2.9 vs 2.3 | 3.3 vs 2.5 |
+| Fault injection (50 runs, offline) | 48/50 expected level, 0 unsafe | **unchanged**: 48/50, 0 unsafe, chain valid in all |
+
+Story chapter 1 (AA72 MCO→DFW): the gate the flight swapped to before (A2) now has a failed jet bridge, so the
+live Haiku agents agreed on **A6** instead. Ground's round-2 reason quoted "8 to 14 more overtime minutes", a
+difference it computed itself; the unverified-number check flagged `8` and `14` as absent from its data
+(OWASP LLM09 mitigation working on real output).
+
+Spend update (ESTIMATE): ≈ $3.43 earlier + $1.16 Routine re-run + ≈ $0.01 story exports ≈ **$4.60**.

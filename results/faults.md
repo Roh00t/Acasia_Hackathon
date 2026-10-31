@@ -23,16 +23,16 @@ Regenerate: `cd backend && uv run python -m atm.faults`
 | 3725311 | ROUTINE | stubborn | L2 | L2 | L1 | 3 | 0/9 | 0 | S04-A1 | - | yes |
 | 3725311 | ROUTINE | no_feasible | L3 | L3 | L1 | 0 | 0/0 | 0 | - | - | yes |
 | 3725311 | ROUTINE | red_team | VETO, unsafe not chosen | L2, 3 VETO | L1 | 3 | 0/9 | 3 | S04-A1 | S62-A1 | yes |
-| 2167594 | ROUTINE | timeout | L1 | L1 | L1 | 2 | 6/6 | 0 | S06-A2 | - | yes |
-| 2167594 | ROUTINE | malformed | L1 | L1 | L1 | 2 | 6/6 | 0 | S06-A2 | - | yes |
-| 2167594 | ROUTINE | stubborn | L2 | L2 | L1 | 3 | 0/9 | 0 | S06-A2 | - | yes |
+| 2167594 | ROUTINE | timeout | L1 | L1 | L1 | 2 | 6/6 | 0 | S06-A4 | - | yes |
+| 2167594 | ROUTINE | malformed | L1 | L1 | L1 | 2 | 6/6 | 0 | S06-A4 | - | yes |
+| 2167594 | ROUTINE | stubborn | L2 | L2 | L1 | 3 | 0/9 | 0 | S06-A4 | - | yes |
 | 2167594 | ROUTINE | no_feasible | L3 | L3 | L1 | 0 | 0/0 | 0 | - | - | yes |
-| 2167594 | ROUTINE | red_team | VETO, unsafe not chosen | L2, 3 VETO | L1 | 3 | 0/9 | 3 | S06-A2 | S62-A4 | yes |
-| 160031 | ROUTINE | timeout | L1 | L1 | L1 | 2 | 6/6 | 0 | S10-A2 | - | yes |
-| 160031 | ROUTINE | malformed | L1 | L1 | L1 | 2 | 6/6 | 0 | S10-A2 | - | yes |
-| 160031 | ROUTINE | stubborn | L2 | L2 | L1 | 3 | 0/9 | 0 | S10-A2 | - | yes |
+| 2167594 | ROUTINE | red_team | VETO, unsafe not chosen | L2, 3 VETO | L1 | 3 | 0/9 | 3 | S06-A4 | S62-A4 | yes |
+| 160031 | ROUTINE | timeout | L1 | L1 | L1 | 2 | 6/6 | 0 | S10-A3 | - | yes |
+| 160031 | ROUTINE | malformed | L1 | L1 | L1 | 2 | 6/6 | 0 | S10-A3 | - | yes |
+| 160031 | ROUTINE | stubborn | L2 | L2 | L1 | 3 | 0/9 | 0 | S10-A3 | - | yes |
 | 160031 | ROUTINE | no_feasible | L3 | L3 | L1 | 0 | 0/0 | 0 | - | - | yes |
-| 160031 | ROUTINE | red_team | VETO, unsafe not chosen | L2, 3 VETO | L1 | 3 | 0/9 | 3 | S10-A2 | S62-A1 | yes |
+| 160031 | ROUTINE | red_team | VETO, unsafe not chosen | L2, 3 VETO | L1 | 3 | 0/9 | 3 | S10-A3 | S62-A1 | yes |
 | 3072818 | ROUTINE | timeout | L1 | L1 | L1 | 2 | 6/6 | 0 | S10-A3 | - | yes |
 | 3072818 | ROUTINE | malformed | L1 | L1 | L1 | 2 | 6/6 | 0 | S10-A3 | - | yes |
 | 3072818 | ROUTINE | stubborn | L2 | L2 | L1 | 3 | 0/9 | 0 | S10-A3 | - | yes |

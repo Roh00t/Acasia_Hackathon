@@ -9,7 +9,7 @@
       "levels": {
         "L0": 20
       },
-      "mean_rounds": 2.05,
+      "mean_rounds": 2,
       "validator_vetoes": 0,
       "llm_stand_ins": 0,
       "unsafe_plans_accepted": 0,
@@ -23,36 +23,36 @@
         "fb": 10.0
       },
       "negotiated": {
-        "hold_min": 2.9,
-        "fuel_hold_kg": 224.0,
-        "missed_pax": 10.6,
-        "overtime_min": 3.05,
+        "hold_min": 3.3,
+        "fuel_hold_kg": 240.0,
+        "missed_pax": 11.65,
+        "overtime_min": 3.35,
         "gate_change": 0.9,
-        "knock_on_min": 0.64
+        "knock_on_min": 0.65
       },
       "fcfs": {
-        "hold_min": 2.3,
-        "fuel_hold_kg": 200.0,
+        "hold_min": 2.5,
+        "fuel_hold_kg": 208.0,
         "missed_pax": 10.6,
         "overtime_min": 2.65,
         "gate_change": 0.9,
-        "knock_on_min": 0.59
+        "knock_on_min": 0.62
       },
       "fallback_only": {
-        "hold_min": 2.3,
-        "fuel_hold_kg": 200.0,
+        "hold_min": 2.5,
+        "fuel_hold_kg": 208.0,
         "missed_pax": 10.6,
         "overtime_min": 2.65,
         "gate_change": 0.9,
-        "knock_on_min": 0.59
+        "knock_on_min": 0.62
       },
-      "mean_latency_s": 20.99,
+      "mean_latency_s": 18.86,
       "tokens": {
-        "input": 207713,
-        "output": 25523,
-        "cache_read": 149896
+        "input": 155785,
+        "output": 25445,
+        "cache_read": 131558
       },
-      "est_cost_usd_per_negotiation": 0.0686
+      "est_cost_usd_per_negotiation": 0.0579
     },
     "WEATHER": {
       "rows": 20,
@@ -161,5 +161,6 @@
       "est_cost_usd_per_negotiation": 0.0426
     }
   },
-  "label": "MODELLED"
+  "label": "MODELLED",
+  "notes": "ROUTINE re-run 31 Oct 14:3x after adding the ground-equipment failure (same 20 rows, same model); WEATHER and EMERGENCY are from the earlier run, unaffected by that change."
 }
