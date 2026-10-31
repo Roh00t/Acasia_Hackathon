@@ -26,6 +26,14 @@ app.add_middleware(CORSMiddleware, allow_origins=["http://localhost:3000", "http
 RUNS = storage.MEMORY_RUNS
 
 
+def live_allowed() -> bool:
+    """Live Claude runs cost money; on a public Vercel deployment they need ATM_ALLOW_LIVE=1."""
+    import os
+    if not os.environ.get("ANTHROPIC_API_KEY"):
+        return False
+    return os.environ.get("VERCEL") != "1" or os.environ.get("ATM_ALLOW_LIVE") == "1"
+
+
 class RunRequest(BaseModel):
     row_id: int | None = None
     emergency: bool = False
@@ -49,7 +57,7 @@ def health():
         raise HTTPException(503, str(exc)) from exc
     return {"ok": True, "scenarios": len(load_scenarios()),
             "model": os.environ.get("ATM_MODEL", "claude-haiku-5-5"),
-            "live_available": bool(os.environ.get("ANTHROPIC_API_KEY")), "storage": mode}
+            "live_available": live_allowed(), "storage": mode}
 
 
 @app.get("/scenarios")
@@ -66,6 +74,9 @@ def scenarios(cause: str | None = None, limit: int = 50):
 
 @app.post("/run")
 def post_run(req: RunRequest):
+    if req.live and not live_allowed():
+        raise HTTPException(403, "Live Claude runs are not enabled on this deployment; run offline, "
+                                 "or set ATM_ALLOW_LIVE=1 on the backend service.")
     try:
         storage.ensure_available()
     except storage.StorageConfigurationError as exc:

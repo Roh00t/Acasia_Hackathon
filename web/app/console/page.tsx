@@ -341,7 +341,7 @@ export default function ConsolePage() {
                 <button disabled={busy || health === undefined} onClick={() => go("RANDOM")} className="border border-atc px-3 py-1.5 font-mono text-sm text-atc disabled:opacity-50">Random row</button>
                 <label className="flex items-center gap-2 text-sm">
                   <input id="live" type="checkbox" checked={live} disabled={!health?.live_available} onChange={(e) => setLive(e.target.checked)} />
-                  Live Claude agents {health && !health.live_available && <span className="text-muted">(no API key on the server)</span>}
+                  Live Claude agents {health && !health.live_available && <span className="text-muted">(not enabled on this deployment)</span>}
                 </label>
                 <label className="flex items-center gap-2 text-sm">
                   <input id="inject" type="checkbox" checked={inject} onChange={(e) => setInject(e.target.checked)} />

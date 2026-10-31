@@ -73,7 +73,9 @@ has no public rewrite of its own. Do not define `BACKEND_URL` manually.
 Connect a PostgreSQL provider (for example through the Vercel Marketplace) and configure its `DATABASE_URL` for
 the backend service. The API creates its `atm_runs` and `atm_log_entries` tables automatically. Vercel requests
 fail clearly if `DATABASE_URL` is missing; local development without it uses in-memory run state. Configure
-`ANTHROPIC_API_KEY`, `ATM_MODEL` (optional), and `ATM_LOG_KEY` (recommended) for the backend service only. The web
+`ANTHROPIC_API_KEY`, `ATM_MODEL` (optional), and `ATM_LOG_KEY` (recommended) for the backend service only. On
+Vercel, live Claude runs stay off unless `ATM_ALLOW_LIVE=1` is set, so a public URL can't run up API spend; the
+console then runs the offline rule agents. The web
 story remains static and reads files from `web/public/`. The console uses same-origin `/api/*` requests; when the
 backend is unavailable, it falls back to replay mode. For local `npm run dev`, the proxy targets
 `http://localhost:8010` unless `vercel dev` supplies the service binding.

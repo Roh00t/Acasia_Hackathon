@@ -157,3 +157,18 @@ def test_timeout_opens_circuit_so_run_finishes_fast(row_id):
     assert "TimeoutError" in first[0]["meta"]["fallback_reason"]
     assert first[1]["meta"]["fallback_reason"].startswith("Skipped")
     assert r["outcome"]["candidate"] is None or all(c["ok"] for c in r["outcome"]["checks"].values())
+
+
+def test_live_runs_need_opt_in_on_vercel(monkeypatch):
+    """A public deployment can't start paid Claude runs unless ATM_ALLOW_LIVE=1."""
+    import atm.api as api
+    monkeypatch.setenv("ANTHROPIC_API_KEY", "test-key")
+    monkeypatch.delenv("VERCEL", raising=False)
+    assert api.live_allowed()  # local: unchanged
+    monkeypatch.setenv("VERCEL", "1")
+    monkeypatch.delenv("ATM_ALLOW_LIVE", raising=False)
+    assert not api.live_allowed()
+    res = TestClient(api.app).post("/run", json={"row_id": 1714727, "live": True})
+    assert res.status_code == 403
+    monkeypatch.setenv("ATM_ALLOW_LIVE", "1")
+    assert api.live_allowed()
