@@ -1,0 +1,624 @@
+{
+  "model": "claude-haiku-5-5",
+  "scenarios": 5,
+  "repeats": 5,
+  "runs": 25,
+  "llm_calls_logged": 150,
+  "plan_agreement_scenarios": 4,
+  "modal_plan_share": 0.92,
+  "levels": {
+    "L0": 23,
+    "L2": 2
+  },
+  "stand_ins": 0,
+  "vetoes": 0,
+  "tokens": {
+    "input": 192225,
+    "output": 56500,
+    "cache_read": 182800
+  },
+  "price_usd_per_mtok": {
+    "input": 0.1,
+    "output": 0.5,
+    "cache_read": 0.01
+  },
+  "est_cost_usd_total": 0.0493,
+  "est_cost_usd_per_negotiation": 0.00197,
+  "mean_latency_s": 14.79,
+  "per_scenario": [
+    {
+      "row_id": 1549734,
+      "subsystem": "ROUTINE",
+      "plans": {
+        "S06-A1": 3,
+        "S08-A1": 2
+      },
+      "modal_plan": "S06-A1",
+      "agreement": "3/5",
+      "all_same": false,
+      "levels": {
+        "L0": 5
+      },
+      "rounds": {
+        "2": 5
+      },
+      "stand_ins": 0,
+      "mean_latency_s": 18.74
+    },
+    {
+      "row_id": 1566110,
+      "subsystem": "ROUTINE",
+      "plans": {
+        "S34-A2": 5
+      },
+      "modal_plan": "S34-A2",
+      "agreement": "5/5",
+      "all_same": true,
+      "levels": {
+        "L0": 5
+      },
+      "rounds": {
+        "2": 5
+      },
+      "stand_ins": 0,
+      "mean_latency_s": 11.27
+    },
+    {
+      "row_id": 1333547,
+      "subsystem": "WEATHER",
+      "plans": {
+        "S06-A1": 5
+      },
+      "modal_plan": "S06-A1",
+      "agreement": "5/5",
+      "all_same": true,
+      "levels": {
+        "L0": 5
+      },
+      "rounds": {
+        "2": 5
+      },
+      "stand_ins": 0,
+      "mean_latency_s": 13.61
+    },
+    {
+      "row_id": 1486918,
+      "subsystem": "WEATHER",
+      "plans": {
+        "S04-A1": 5
+      },
+      "modal_plan": "S04-A1",
+      "agreement": "5/5",
+      "all_same": true,
+      "levels": {
+        "L0": 5
+      },
+      "rounds": {
+        "2": 5
+      },
+      "stand_ins": 0,
+      "mean_latency_s": 16.42
+    },
+    {
+      "row_id": 673104,
+      "subsystem": "EMERGENCY",
+      "plans": {
+        "DIVERT-MLB": 5
+      },
+      "modal_plan": "DIVERT-MLB",
+      "agreement": "5/5",
+      "all_same": true,
+      "levels": {
+        "L0": 3,
+        "L2": 2
+      },
+      "rounds": {
+        "2": 5
+      },
+      "stand_ins": 0,
+      "mean_latency_s": 13.92
+    }
+  ],
+  "runs_detail": [
+    {
+      "row_id": 1549734,
+      "emergency": false,
+      "subsystem": "ROUTINE",
+      "level": "L0",
+      "rounds_used": 2,
+      "chosen": "S06-A1",
+      "stand_ins": 0,
+      "vetoes": 0,
+      "messages": 6,
+      "latency_s": 16.28,
+      "tokens": {
+        "input": 11759,
+        "output": 2424,
+        "cache_read": 7312
+      },
+      "models": [
+        "claude-haiku-5-5"
+      ]
+    },
+    {
+      "row_id": 1549734,
+      "emergency": false,
+      "subsystem": "ROUTINE",
+      "level": "L0",
+      "rounds_used": 2,
+      "chosen": "S08-A1",
+      "stand_ins": 0,
+      "vetoes": 0,
+      "messages": 6,
+      "latency_s": 21.12,
+      "tokens": {
+        "input": 11759,
+        "output": 3368,
+        "cache_read": 7312
+      },
+      "models": [
+        "claude-haiku-5-5"
+      ]
+    },
+    {
+      "row_id": 1549734,
+      "emergency": false,
+      "subsystem": "ROUTINE",
+      "level": "L0",
+      "rounds_used": 2,
+      "chosen": "S06-A1",
+      "stand_ins": 0,
+      "vetoes": 0,
+      "messages": 6,
+      "latency_s": 17.24,
+      "tokens": {
+        "input": 11759,
+        "output": 2593,
+        "cache_read": 7312
+      },
+      "models": [
+        "claude-haiku-5-5"
+      ]
+    },
+    {
+      "row_id": 1549734,
+      "emergency": false,
+      "subsystem": "ROUTINE",
+      "level": "L0",
+      "rounds_used": 2,
+      "chosen": "S06-A1",
+      "stand_ins": 0,
+      "vetoes": 0,
+      "messages": 6,
+      "latency_s": 18.32,
+      "tokens": {
+        "input": 11759,
+        "output": 2811,
+        "cache_read": 7312
+      },
+      "models": [
+        "claude-haiku-5-5"
+      ]
+    },
+    {
+      "row_id": 1549734,
+      "emergency": false,
+      "subsystem": "ROUTINE",
+      "level": "L0",
+      "rounds_used": 2,
+      "chosen": "S08-A1",
+      "stand_ins": 0,
+      "vetoes": 0,
+      "messages": 6,
+      "latency_s": 20.75,
+      "tokens": {
+        "input": 11759,
+        "output": 3425,
+        "cache_read": 7312
+      },
+      "models": [
+        "claude-haiku-5-5"
+      ]
+    },
+    {
+      "row_id": 1566110,
+      "emergency": false,
+      "subsystem": "ROUTINE",
+      "level": "L0",
+      "rounds_used": 2,
+      "chosen": "S34-A2",
+      "stand_ins": 0,
+      "vetoes": 0,
+      "messages": 6,
+      "latency_s": 10.92,
+      "tokens": {
+        "input": 3300,
+        "output": 1544,
+        "cache_read": 7312
+      },
+      "models": [
+        "claude-haiku-5-5"
+      ]
+    },
+    {
+      "row_id": 1566110,
+      "emergency": false,
+      "subsystem": "ROUTINE",
+      "level": "L0",
+      "rounds_used": 2,
+      "chosen": "S34-A2",
+      "stand_ins": 0,
+      "vetoes": 0,
+      "messages": 6,
+      "latency_s": 11.92,
+      "tokens": {
+        "input": 3300,
+        "output": 1716,
+        "cache_read": 7312
+      },
+      "models": [
+        "claude-haiku-5-5"
+      ]
+    },
+    {
+      "row_id": 1566110,
+      "emergency": false,
+      "subsystem": "ROUTINE",
+      "level": "L0",
+      "rounds_used": 2,
+      "chosen": "S34-A2",
+      "stand_ins": 0,
+      "vetoes": 0,
+      "messages": 6,
+      "latency_s": 11.37,
+      "tokens": {
+        "input": 3300,
+        "output": 1748,
+        "cache_read": 7312
+      },
+      "models": [
+        "claude-haiku-5-5"
+      ]
+    },
+    {
+      "row_id": 1566110,
+      "emergency": false,
+      "subsystem": "ROUTINE",
+      "level": "L0",
+      "rounds_used": 2,
+      "chosen": "S34-A2",
+      "stand_ins": 0,
+      "vetoes": 0,
+      "messages": 6,
+      "latency_s": 11.18,
+      "tokens": {
+        "input": 3300,
+        "output": 1644,
+        "cache_read": 7312
+      },
+      "models": [
+        "claude-haiku-5-5"
+      ]
+    },
+    {
+      "row_id": 1566110,
+      "emergency": false,
+      "subsystem": "ROUTINE",
+      "level": "L0",
+      "rounds_used": 2,
+      "chosen": "S34-A2",
+      "stand_ins": 0,
+      "vetoes": 0,
+      "messages": 6,
+      "latency_s": 10.98,
+      "tokens": {
+        "input": 3300,
+        "output": 1638,
+        "cache_read": 7312
+      },
+      "models": [
+        "claude-haiku-5-5"
+      ]
+    },
+    {
+      "row_id": 1333547,
+      "emergency": false,
+      "subsystem": "WEATHER",
+      "level": "L0",
+      "rounds_used": 2,
+      "chosen": "S06-A1",
+      "stand_ins": 0,
+      "vetoes": 0,
+      "messages": 6,
+      "latency_s": 13.29,
+      "tokens": {
+        "input": 7595,
+        "output": 2041,
+        "cache_read": 7312
+      },
+      "models": [
+        "claude-haiku-5-5"
+      ]
+    },
+    {
+      "row_id": 1333547,
+      "emergency": false,
+      "subsystem": "WEATHER",
+      "level": "L0",
+      "rounds_used": 2,
+      "chosen": "S06-A1",
+      "stand_ins": 0,
+      "vetoes": 0,
+      "messages": 6,
+      "latency_s": 13.3,
+      "tokens": {
+        "input": 7595,
+        "output": 2103,
+        "cache_read": 7312
+      },
+      "models": [
+        "claude-haiku-5-5"
+      ]
+    },
+    {
+      "row_id": 1333547,
+      "emergency": false,
+      "subsystem": "WEATHER",
+      "level": "L0",
+      "rounds_used": 2,
+      "chosen": "S06-A1",
+      "stand_ins": 0,
+      "vetoes": 0,
+      "messages": 6,
+      "latency_s": 14.03,
+      "tokens": {
+        "input": 7595,
+        "output": 2221,
+        "cache_read": 7312
+      },
+      "models": [
+        "claude-haiku-5-5"
+      ]
+    },
+    {
+      "row_id": 1333547,
+      "emergency": false,
+      "subsystem": "WEATHER",
+      "level": "L0",
+      "rounds_used": 2,
+      "chosen": "S06-A1",
+      "stand_ins": 0,
+      "vetoes": 0,
+      "messages": 6,
+      "latency_s": 12.78,
+      "tokens": {
+        "input": 7595,
+        "output": 2043,
+        "cache_read": 7312
+      },
+      "models": [
+        "claude-haiku-5-5"
+      ]
+    },
+    {
+      "row_id": 1333547,
+      "emergency": false,
+      "subsystem": "WEATHER",
+      "level": "L0",
+      "rounds_used": 2,
+      "chosen": "S06-A1",
+      "stand_ins": 0,
+      "vetoes": 0,
+      "messages": 6,
+      "latency_s": 14.66,
+      "tokens": {
+        "input": 7595,
+        "output": 2111,
+        "cache_read": 7312
+      },
+      "models": [
+        "claude-haiku-5-5"
+      ]
+    },
+    {
+      "row_id": 1486918,
+      "emergency": false,
+      "subsystem": "WEATHER",
+      "level": "L0",
+      "rounds_used": 2,
+      "chosen": "S04-A1",
+      "stand_ins": 0,
+      "vetoes": 0,
+      "messages": 6,
+      "latency_s": 16.92,
+      "tokens": {
+        "input": 12827,
+        "output": 2780,
+        "cache_read": 7312
+      },
+      "models": [
+        "claude-haiku-5-5"
+      ]
+    },
+    {
+      "row_id": 1486918,
+      "emergency": false,
+      "subsystem": "WEATHER",
+      "level": "L0",
+      "rounds_used": 2,
+      "chosen": "S04-A1",
+      "stand_ins": 0,
+      "vetoes": 0,
+      "messages": 6,
+      "latency_s": 17.03,
+      "tokens": {
+        "input": 12827,
+        "output": 2706,
+        "cache_read": 7312
+      },
+      "models": [
+        "claude-haiku-5-5"
+      ]
+    },
+    {
+      "row_id": 1486918,
+      "emergency": false,
+      "subsystem": "WEATHER",
+      "level": "L0",
+      "rounds_used": 2,
+      "chosen": "S04-A1",
+      "stand_ins": 0,
+      "vetoes": 0,
+      "messages": 6,
+      "latency_s": 16.16,
+      "tokens": {
+        "input": 12827,
+        "output": 2498,
+        "cache_read": 7312
+      },
+      "models": [
+        "claude-haiku-5-5"
+      ]
+    },
+    {
+      "row_id": 1486918,
+      "emergency": false,
+      "subsystem": "WEATHER",
+      "level": "L0",
+      "rounds_used": 2,
+      "chosen": "S04-A1",
+      "stand_ins": 0,
+      "vetoes": 0,
+      "messages": 6,
+      "latency_s": 15.96,
+      "tokens": {
+        "input": 12827,
+        "output": 2526,
+        "cache_read": 7312
+      },
+      "models": [
+        "claude-haiku-5-5"
+      ]
+    },
+    {
+      "row_id": 1486918,
+      "emergency": false,
+      "subsystem": "WEATHER",
+      "level": "L0",
+      "rounds_used": 2,
+      "chosen": "S04-A1",
+      "stand_ins": 0,
+      "vetoes": 0,
+      "messages": 6,
+      "latency_s": 16.03,
+      "tokens": {
+        "input": 12827,
+        "output": 2505,
+        "cache_read": 7312
+      },
+      "models": [
+        "claude-haiku-5-5"
+      ]
+    },
+    {
+      "row_id": 673104,
+      "emergency": true,
+      "subsystem": "EMERGENCY",
+      "level": "L0",
+      "rounds_used": 2,
+      "chosen": "DIVERT-MLB",
+      "stand_ins": 0,
+      "vetoes": 0,
+      "messages": 6,
+      "latency_s": 13.1,
+      "tokens": {
+        "input": 2964,
+        "output": 1850,
+        "cache_read": 7312
+      },
+      "models": [
+        "claude-haiku-5-5"
+      ]
+    },
+    {
+      "row_id": 673104,
+      "emergency": true,
+      "subsystem": "EMERGENCY",
+      "level": "L0",
+      "rounds_used": 2,
+      "chosen": "DIVERT-MLB",
+      "stand_ins": 0,
+      "vetoes": 0,
+      "messages": 6,
+      "latency_s": 14.01,
+      "tokens": {
+        "input": 2964,
+        "output": 1941,
+        "cache_read": 7312
+      },
+      "models": [
+        "claude-haiku-5-5"
+      ]
+    },
+    {
+      "row_id": 673104,
+      "emergency": true,
+      "subsystem": "EMERGENCY",
+      "level": "L2",
+      "rounds_used": 2,
+      "chosen": "DIVERT-MLB",
+      "stand_ins": 0,
+      "vetoes": 0,
+      "messages": 6,
+      "latency_s": 14.03,
+      "tokens": {
+        "input": 2964,
+        "output": 2033,
+        "cache_read": 7312
+      },
+      "models": [
+        "claude-haiku-5-5"
+      ]
+    },
+    {
+      "row_id": 673104,
+      "emergency": true,
+      "subsystem": "EMERGENCY",
+      "level": "L0",
+      "rounds_used": 2,
+      "chosen": "DIVERT-MLB",
+      "stand_ins": 0,
+      "vetoes": 0,
+      "messages": 6,
+      "latency_s": 14.77,
+      "tokens": {
+        "input": 2964,
+        "output": 2234,
+        "cache_read": 7312
+      },
+      "models": [
+        "claude-haiku-5-5"
+      ]
+    },
+    {
+      "row_id": 673104,
+      "emergency": true,
+      "subsystem": "EMERGENCY",
+      "level": "L2",
+      "rounds_used": 2,
+      "chosen": "DIVERT-MLB",
+      "stand_ins": 0,
+      "vetoes": 0,
+      "messages": 6,
+      "latency_s": 13.67,
+      "tokens": {
+        "input": 2964,
+        "output": 1997,
+        "cache_read": 7312
+      },
+      "models": [
+        "claude-haiku-5-5"
+      ]
+    }
+  ]
+}
