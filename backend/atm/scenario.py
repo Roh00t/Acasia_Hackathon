@@ -17,7 +17,7 @@ import random
 
 from .data import get_row, load_airports
 from .schemas import (
-    Arrival, Closure, Connection, FlightState, Gate, GroundState, RunwayState,
+    Arrival, Closure, Connection, EquipmentFailure, FlightState, Gate, GroundState, RunwayState,
     Scenario, Subsystem, TaxiwayBlock, Wake,
 )
 
@@ -176,12 +176,26 @@ def build_scenario(row_id: int, emergency: bool = False) -> Scenario:
         next_departure=round(EARLIEST_LANDING + taxi_in + turnaround + rng.uniform(5, 25), 0),
         crew_shift_end=round(rng.uniform(35, 80), 0),
     )
+    if subsystem == Subsystem.ROUTINE:
+        # Ground equipment fails on a gate the flight could otherwise swap to. A separate RNG
+        # stream keeps every other field of the scenario exactly as it was.
+        erng = random.Random(f"{row_id}:{subsystem.value}:equipment")
+        alternatives = [g for g in compatible if g.id != planned.id]
+        free_soon = [g for g in alternatives if not any(a < 60 and b > 0 for a, b in g.busy)]
+        failed = erng.choice(free_soon or alternatives)
+        ground.equipment_failure = EquipmentFailure(
+            gate=failed.id, equipment=erng.choice(["jet bridge", "ground power unit"]),
+            until=round(erng.uniform(30, 90), 0),
+        )
 
     arrival_delay = float(row.get("ARRIVAL_DELAY") or 0)
     t0_clock = _clock_add(str(row["SCHEDULED_ARRIVAL"]).zfill(4), arrival_delay - EARLIEST_LANDING - taxi_in)
     narrative = {
         Subsystem.ROUTINE: f"{callsign} arrives {late_delay:.0f} min late on a late inbound aircraft. "
-                           f"Its planned gate {planned.id} is still occupied and the ramp crew shift ends soon.",
+                           f"Its planned gate {planned.id} is still occupied and the ramp crew shift ends soon."
+                           + (f" The {ground.equipment_failure.equipment} at gate {ground.equipment_failure.gate} "
+                              f"has failed until T+{ground.equipment_failure.until:.0f}."
+                              if ground.equipment_failure else ""),
         Subsystem.WEATHER: f"Weather at {dest} ({weather_delay:.0f} min weather delay in the DOT row) cuts the "
                            f"arrival rate from {normal_cap} to {cap}/hr with turbulence on final.",
         Subsystem.EMERGENCY: f"SYNTHETIC: a drone sighting closes runway {runway.name} at {dest} from "
@@ -193,6 +207,8 @@ def build_scenario(row_id: int, emergency: bool = False) -> Scenario:
                  "connections", "gates", "crew_shift", "turnaround", "taxiway_block"]
     if closure:
         synthetic.append("runway_closure")
+    if ground.equipment_failure:
+        synthetic.append("equipment_failure")
 
     return Scenario(
         scenario_id=f"{row_id}-{subsystem.value}", row_id=row_id, subsystem=subsystem, base_cause=base,

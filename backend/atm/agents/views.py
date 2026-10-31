@@ -38,7 +38,8 @@ def domain_state(agent: AgentName, s: Scenario) -> dict:
                 "connections": [c.model_dump() for c in f.connections]}
     g = s.ground
     return {**event, "planned_gate": g.planned_gate, "turnaround_min": g.turnaround_min,
-            "crew_shift_end": g.crew_shift_end, "next_departure": g.next_departure}
+            "crew_shift_end": g.crew_shift_end, "next_departure": g.next_departure,
+            "equipment_failure": g.equipment_failure.model_dump() if g.equipment_failure else None}
 
 
 def domain_candidates(agent: AgentName, feasible: list[Assessment], limit: int | None = None) -> list[dict]:

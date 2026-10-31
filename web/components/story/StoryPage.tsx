@@ -19,12 +19,12 @@ const Airfield = dynamic(() => import("./Airfield"), { ssr: false });
 
 const MONTHS = ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"];
 const TAGLINE: Record<Subsystem, string> = {
-  ROUTINE: "A late inbound aircraft.",
+  ROUTINE: "A late inbound, a failed gate.",
   WEATHER: "A storm cuts arrivals.",
   EMERGENCY: "A drone closes the runway.",
 };
 const TRIGGER: Record<Subsystem, string> = {
-  ROUTINE: "Brief trigger: LATE_AIRCRAFT_DELAY > 20",
+  ROUTINE: "Brief triggers: LATE_AIRCRAFT_DELAY > 20 · ground equipment fails",
   WEATHER: "Brief trigger: WEATHER_DELAY > 15",
   EMERGENCY: "Synthetic closure layered on a real row",
 };
@@ -120,6 +120,11 @@ function StoryAgentCard({ m, facts, subject }: { m: AgentMessage; facts: string[
       <p className="mt-1 line-clamp-3 text-base leading-snug text-primary/85">{m.reason}</p>
       {facts.length > 0 && (
         <div className="mt-1.5 border-t pt-1 font-mono text-xs text-muted">checked{subject ? ` ${subject}` : ""}: {facts.slice(0, 3).join(" · ")}</div>
+      )}
+      {m.meta?.unverified_numbers && m.meta.unverified_numbers.length > 0 && (
+        <div className="mt-1 font-mono text-xs text-pilot">
+          Flagged: {m.meta.unverified_numbers.join(", ")} not in this agent&apos;s data
+        </div>
       )}
     </div>
   );
@@ -278,7 +283,10 @@ export default function StoryPage() {
               {/* Disruption */}
               <Panel beat={beatIndex(c, "disruption")} active={beat}>
                 <Heading lines={[
-                  d.subsystem === "ROUTINE" ? `Gate ${s.ground.planned_gate} is still occupied.`
+                  d.subsystem === "ROUTINE"
+                    ? s.ground.equipment_failure
+                      ? `Gate ${s.ground.planned_gate} occupied. ${s.ground.equipment_failure.gate} out of service.`
+                      : `Gate ${s.ground.planned_gate} is still occupied.`
                     : d.subsystem === "WEATHER" ? `Arrivals cut to ${s.runway.arrival_cap_per_hr} an hour.` : "Runway closed.",
                 ]} />
                 {d.subsystem === "EMERGENCY" && s.runway.closure && (
@@ -296,7 +304,13 @@ export default function StoryPage() {
                         {d.derived.next_leg && (
                           <Fact label={`Tail ${String(r.TAIL_NUMBER)} next leg`} value={`${d.derived.next_leg.flight} to ${d.derived.next_leg.dest} at ${d.derived.next_leg.dep}`} kind="REAL" />
                         )}
-                        <Fact label="Turnaround" value={`${s.ground.turnaround_min} min`} kind="SYNTHETIC" />
+                        {s.ground.equipment_failure && (
+                          <Fact
+                            label={`Gate ${s.ground.equipment_failure.gate} ${s.ground.equipment_failure.equipment} failed`}
+                            value={`out until T+${s.ground.equipment_failure.until} min`}
+                            kind="SYNTHETIC"
+                          />
+                        )}
                       </>
                     )}
                     {d.subsystem === "WEATHER" && (

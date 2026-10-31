@@ -339,6 +339,10 @@ function Scene({ chapters, reduced }: { chapters: (StoryChapter | null)[]; reduc
   const pilotNode = useRef<THREE.Group>(null);
   const packets = useRef<THREE.Group>(null);
   const padMats = useRef<(THREE.MeshStandardMaterial | null)[]>([]);
+  const failTag = useRef<THREE.Group>(null);
+  const routine = chapters.find((c) => c?.subsystem === "ROUTINE");
+  const failure = routine?.live.scenario.ground.equipment_failure ?? null;
+  const failText = failure ? `${failure.equipment === "jet bridge" ? "JET BRIDGE" : "GROUND POWER"} OUT` : "EQUIPMENT OUT";
   const rain = useRef(0);
   const closure = useRef(0);
   const flash = useRef(0);
@@ -440,17 +444,25 @@ function Scene({ chapters, reduced }: { chapters: (StoryChapter | null)[]; reduc
       c.visible = i < Math.max(2, Math.round(4 * ratio)) && uu < 0.92;
     });
 
-    // ---- gates: amber clash on the planned gate (Routine), green on the agreed gate at the outcome
+    // ---- gates: amber clash on the planned gate and red failed equipment (Routine),
+    // green on the agreed gate at the outcome
     const planned = run?.scenario.ground.planned_gate;
+    const failedGate = sub === "ROUTINE" && phaseIdx >= 1 && phaseIdx <= 4 ? run?.scenario.ground.equipment_failure?.gate : null;
     GATE_IDS.forEach((id, i) => {
       const m = padMats.current[i];
       if (!m) return;
       const clash = sub === "ROUTINE" && id === planned && phaseIdx >= 1 && phaseIdx <= 3;
+      const broken = id === failedGate;
       const agreed = id === chosen?.gate && (beat.phase === "outcome" || beat.phase === "negotiation");
-      m.color.set(agreed ? COLOR.ground : clash ? COLOR.amber : "#2a313b");
-      m.emissive.set(agreed ? COLOR.ground : clash ? COLOR.amber : "#000000");
-      m.emissiveIntensity = agreed || clash ? 0.35 + 0.25 * Math.sin(t * 4) : 0;
+      const color = agreed ? COLOR.ground : broken ? COLOR.crimson : clash ? COLOR.amber : null;
+      m.color.set(color ?? "#2a313b");
+      m.emissive.set(color ?? "#000000");
+      m.emissiveIntensity = color ? 0.35 + 0.25 * Math.sin(t * 4) : 0;
     });
+    if (failTag.current) {
+      failTag.current.visible = !!failedGate;
+      if (failedGate) failTag.current.position.set(gateX(failedGate), 3.2, GATE_Z + 1);
+    }
     // Aircraft parked where the scenario says a gate is occupied at T0 (never the agreed gate).
     const busy = new Set(
       (run?.scenario.ground.gates ?? [])
@@ -559,6 +571,9 @@ function Scene({ chapters, reduced }: { chapters: (StoryChapter | null)[]; reduc
           </group>
         </group>
       ))}
+      <group ref={failTag} visible={false}>
+        <Label text={failText} color={COLOR.crimson} scale={0.8} />
+      </group>
       <group ref={parked}>
         {GATE_IDS.map((id) => (
           <group key={`p${id}`} position={[gateX(id), GROUND_Y, STAND_Z]} rotation={[0, Math.PI / 2, 0]} visible={false}>

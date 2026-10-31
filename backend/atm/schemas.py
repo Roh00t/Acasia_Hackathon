@@ -87,6 +87,13 @@ class Gate(BaseModel):
     busy: list[tuple[float, float]]
 
 
+class EquipmentFailure(BaseModel):
+    """A ground-equipment fault that takes a gate out of use (the brief's 'ground equipment fail')."""
+    gate: str
+    equipment: str
+    until: float
+
+
 class GroundState(BaseModel):
     """GROUND domain."""
     gates: list[Gate]
@@ -97,6 +104,7 @@ class GroundState(BaseModel):
     crew_shift_end: float
     overtime_cost_per_min: float = 12.0
     gate_buffer_min: float = 10.0
+    equipment_failure: EquipmentFailure | None = None
 
 
 class Scenario(BaseModel):

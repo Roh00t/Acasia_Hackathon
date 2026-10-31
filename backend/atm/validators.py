@@ -6,7 +6,8 @@ veto overrides any agent ACCEPT. Thresholds are simplified and marked:
   3-6 NM, converted to minutes at a 140 kt approach speed. [Likely, check FAA JO 7110.65]
   Too close behind the leader is a veto; followers pushed back is ATC's throughput cost.
 - Fuel: land with at least 45 min final reserve plus fuel to the alternate. [Likely, 14 CFR 121.639]
-- Gates: no overlap with a 10 min buffer; HEAVY needs a widebody gate.
+- Gates: no overlap with a 10 min buffer; HEAVY needs a widebody gate; no gate whose
+  jet bridge or ground power unit has failed (Routine's equipment fault).
 """
 
 from __future__ import annotations
@@ -122,6 +123,10 @@ def check_ground(s: Scenario, c: Candidate) -> tuple[Check, dict[str, float]]:
     }
     if s.flight.wake == Wake.HEAVY and not gate.widebody:
         return Check(ok=False, code="GATE_SIZE", detail=f"{c.gate} cannot take a HEAVY aircraft"), metrics
+    ef = g.equipment_failure
+    if ef and c.gate == ef.gate and on_block < ef.until:
+        return Check(ok=False, code="EQUIPMENT_FAILURE",
+                     detail=f"{ef.equipment.capitalize()} at {c.gate} out of service until T+{ef.until:.0f}"), metrics
     for a, b in gate.busy:
         if occ[0] < b and a < occ[1]:
             return Check(ok=False, code="GATE_CONFLICT",

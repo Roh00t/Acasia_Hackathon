@@ -79,6 +79,7 @@ export type Run = {
       crew_shift_end: number;
       turnaround_min: number;
       gates: { id: string; widebody: boolean; busy?: [number, number][] }[];
+      equipment_failure?: { gate: string; equipment: string; until: number } | null;
     };
     synthetic: string[];
   };

@@ -145,3 +145,34 @@ def test_no_feasible_option_escalates_l3(rows, monkeypatch):
     monkeypatch.setattr(coord, "assess_all", all_fail)
     r = run(rows["routine"], write=False)
     assert r["outcome"]["level"] == "L3" and r["outcome"]["candidate"] is None
+
+
+# ---------------------------------------------------------------- ground equipment failure (Routine)
+
+def test_routine_has_equipment_failure_on_another_gate(rows):
+    s = build_scenario(rows["routine"])
+    ef = s.ground.equipment_failure
+    assert ef is not None and ef.gate != s.ground.planned_gate
+    assert "equipment_failure" in s.synthetic and ef.gate in s.narrative
+    assert build_scenario(rows["weather"]).ground.equipment_failure is None
+
+
+def test_failed_equipment_vetoes_gate_until_repaired(rows):
+    s = build_scenario(rows["routine"])
+    ef = s.ground.equipment_failure
+    gate = next(g for g in s.ground.gates if g.id == ef.gate)
+    gate.busy = []
+    s.flight.wake = Wake.LARGE
+    taxi = s.ground.taxi_in_min
+    before = check_ground(s, Candidate(id="x", kind="LAND", t=ef.until - taxi - 5, gate=ef.gate))[0]
+    after = check_ground(s, Candidate(id="x", kind="LAND", t=ef.until - taxi + 1, gate=ef.gate))[0]
+    assert not before.ok and before.code == "EQUIPMENT_FAILURE"
+    assert after.ok
+
+
+def test_equipment_failure_is_deterministic(rows):
+    """Same row, same fault: the failure comes from its own seeded RNG stream."""
+    s = build_scenario(rows["routine"])
+    assert s.ground.equipment_failure is not None
+    again = build_scenario(rows["routine"]).model_dump()
+    assert again == s.model_dump()

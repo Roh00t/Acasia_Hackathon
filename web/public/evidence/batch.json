@@ -1,13 +1,14 @@
 {
   "n_per_subsystem": 50,
   "mode": "offline",
+  "model": null,
   "subsystems": {
     "ROUTINE": {
       "rows": 50,
-      "consensus_pct": 98.0,
+      "consensus_pct": 96.0,
       "levels": {
-        "L1": 49,
-        "L2": 1
+        "L1": 48,
+        "L2": 2
       },
       "mean_rounds": 2.04,
       "validator_vetoes": 0,
@@ -18,35 +19,40 @@
         "GATE_CONFLICT": 49
       },
       "divert_pct": {
-        "neg": 8.0,
-        "fcfs": 8.0,
-        "fb": 8.0
+        "neg": 12.0,
+        "fcfs": 12.0,
+        "fb": 12.0
       },
       "negotiated": {
-        "hold_min": 2.64,
-        "fuel_hold_kg": 213.4,
-        "missed_pax": 9.38,
-        "overtime_min": 4.56,
-        "gate_change": 0.9,
-        "knock_on_min": 0.54
+        "hold_min": 3.88,
+        "fuel_hold_kg": 309.32,
+        "missed_pax": 12.36,
+        "overtime_min": 4.94,
+        "gate_change": 0.86,
+        "knock_on_min": 0.51
       },
       "fcfs": {
-        "hold_min": 2.48,
-        "fuel_hold_kg": 207.0,
-        "missed_pax": 9.38,
-        "overtime_min": 4.56,
-        "gate_change": 0.9,
-        "knock_on_min": 0.51
+        "hold_min": 3.8,
+        "fuel_hold_kg": 306.12,
+        "missed_pax": 12.36,
+        "overtime_min": 4.94,
+        "gate_change": 0.86,
+        "knock_on_min": 0.5
       },
       "fallback_only": {
-        "hold_min": 2.48,
-        "fuel_hold_kg": 207.0,
-        "missed_pax": 9.38,
-        "overtime_min": 4.56,
-        "gate_change": 0.9,
-        "knock_on_min": 0.51
+        "hold_min": 3.8,
+        "fuel_hold_kg": 306.12,
+        "missed_pax": 12.36,
+        "overtime_min": 4.94,
+        "gate_change": 0.86,
+        "knock_on_min": 0.5
       },
-      "mean_latency_s": 0.02
+      "mean_latency_s": 0.02,
+      "tokens": {
+        "input": 0,
+        "output": 0,
+        "cache_read": 0
+      }
     },
     "WEATHER": {
       "rows": 50,
@@ -93,7 +99,12 @@
         "gate_change": 0.74,
         "knock_on_min": 0.34
       },
-      "mean_latency_s": 0.01
+      "mean_latency_s": 0.01,
+      "tokens": {
+        "input": 0,
+        "output": 0,
+        "cache_read": 0
+      }
     },
     "EMERGENCY": {
       "rows": 50,
@@ -141,7 +152,12 @@
         "gate_change": 0.4,
         "knock_on_min": 2.5
       },
-      "mean_latency_s": 0.01
+      "mean_latency_s": 0.01,
+      "tokens": {
+        "input": 0,
+        "output": 0,
+        "cache_read": 0
+      }
     }
   },
   "label": "MODELLED"
