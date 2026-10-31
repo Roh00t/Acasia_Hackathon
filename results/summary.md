@@ -200,3 +200,14 @@ difference it computed itself; the unverified-number check flagged `8` and `14` 
 (OWASP LLM09 mitigation working on real output).
 
 Spend update (ESTIMATE): ≈ $3.43 earlier + $1.16 Routine re-run + ≈ $0.01 story exports ≈ **$4.60**.
+
+## Known failures
+
+Fault injection reached the expected fallback level in **48 of 50** runs. The 2 misses, stated plainly:
+
+| Row | Subsystem | Injected fault | Expected | Actual | Why |
+| --- | --- | --- | --- | --- | --- |
+| 4882283 | EMERGENCY (synthetic drone closure) | agent timeout | L1 | **L2** | All 9 agent messages were taken over by the rule agents, as designed. On this row the rule agents themselves do not agree within 3 rounds: the **no-fault offline run of the same row is also L2**. So the ladder correctly went one rung further, to the deterministic lowest-cost legal plan (S30-A1). |
+| 4882283 | EMERGENCY | malformed output | L1 | **L2** | Same row, same reason. |
+
+What this means: a rule-agent stand-in guarantees an answer, not a consensus. In both runs the plan was validator-legal, the hash chain verified, and **no unsafe plan was accepted**. No code was changed to hide these.

@@ -37,7 +37,8 @@ def make_agents(live: bool) -> dict:
     if not live:
         return {n: RuleAgent(n) for n in AGENTS}
     from .agents.llm import LLMAgent
-    return {n: LLMAgent(n) for n in AGENTS}
+    circuit: dict = {}  # one per run, shared so a dead connection costs one timeout, not nine
+    return {n: LLMAgent(n, circuit=circuit) for n in AGENTS}
 
 
 class InjectedPilot:

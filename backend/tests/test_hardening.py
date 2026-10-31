@@ -131,3 +131,21 @@ def test_cannot_approve_an_escalation(client, row_id):
     r = client.post("/run", json={"row_id": row_id}).json()
     api.RUNS[r["run_id"]]["outcome"]["candidate"] = None  # simulate L3
     assert client.post(f"/runs/{r['run_id']}/approve", json={"decision": "APPROVE"}).status_code == 409
+
+
+def test_timeout_opens_circuit_so_run_finishes_fast(row_id):
+    """One timeout and the rest of the run goes straight to the rule agents: no 9 x 25 s hang."""
+    def hangs(_):
+        raise TimeoutError("read timed out")
+
+    msgs = FakeMessages(hangs)
+    client = SimpleNamespace(messages=msgs)
+    circuit: dict = {}
+    agents = {n: LLMAgent(n, client=client, circuit=circuit) for n in AGENTS}
+    r = run(row_id, agents=agents, write=False)
+    assert msgs.calls == 1  # no retry after a timeout, and later agents skip the call
+    first = r["rounds"][0]["messages"]
+    assert all(m["level"] == "L1" for m in first)
+    assert "TimeoutError" in first[0]["meta"]["fallback_reason"]
+    assert first[1]["meta"]["fallback_reason"].startswith("Skipped")
+    assert r["outcome"]["candidate"] is None or all(c["ok"] for c in r["outcome"]["checks"].values())

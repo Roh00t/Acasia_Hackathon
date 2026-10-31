@@ -277,6 +277,12 @@ export default function StoryPage() {
                   <p className="mt-2 text-lg text-primary/85">
                     {date}, {delay}, from {String(r.ORIGIN_AIRPORT)}. US DOT on-time data, row {d.row_id}.
                   </p>
+                  {d.subsystem === "ROUTINE" && Number(r.LATE_AIRCRAFT_DELAY) > 180 && (
+                    <p className="mt-2 text-base text-muted">
+                      Real row; an unusually long late-aircraft delay, chosen because it shows a gate clash, an equipment
+                      failure and a flagged agent number together.
+                    </p>
+                  )}
                 </Card>
               </Panel>
 

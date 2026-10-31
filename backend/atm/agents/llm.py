@@ -22,6 +22,7 @@ from .views import domain_candidates
 
 MODEL = os.environ.get("ATM_MODEL", "claude-haiku-5-5")
 CANDIDATES_SHOWN = 25
+CALL_TIMEOUT_S = 25.0  # one agent call never blocks longer than this; then the rule agent takes over
 # A number not preceded by a letter, digit or dot, so ids like S18-A3 don't count.
 NUMBER = re.compile(r"(?<![\w.])-?\d+(?:\.\d+)?")
 
@@ -57,11 +58,14 @@ class LLMReply(BaseModel):
 class LLMAgent:
     level = "L0"
 
-    def __init__(self, name: AgentName, client=None):
+    def __init__(self, name: AgentName, client=None, circuit: dict | None = None):
         import anthropic
 
         self.name = name
-        self.client = client or anthropic.Anthropic()
+        # No hidden SDK retries: our own loop retries once on bad output, and a dead connection fails fast.
+        self.client = client or anthropic.Anthropic(timeout=CALL_TIMEOUT_S, max_retries=0)
+        # Shared by the three agents of one run: once Claude is unreachable, the rest skip straight to L1.
+        self.circuit = circuit if circuit is not None else {}
         self.fallback = RuleAgent(name)
         self.last_meta: dict = {}
         self.extra_instruction: str | None = None  # used by the adversarial test only
@@ -86,6 +90,9 @@ class LLMAgent:
 
     def _run(self, round: int, task: dict, valid_ids: set[str], proposal_id: str | None, fallback) -> AgentMessage:
         self.last_meta = {"model": MODEL, "prompt_hash": prompt_hash(self.name), "attempts": 0}
+        if self.circuit.get("open"):
+            self.last_meta.update(latency_s=0.0, fallback_reason=f"Skipped: {self.circuit['why']}")
+            return fallback()
         error = None
         t0 = time.monotonic()
         for _ in range(2):
@@ -109,6 +116,10 @@ class LLMAgent:
                                     red_lines=r.red_lines[:5], level="L0")
             except Exception as e:  # invalid JSON, schema, API error, timeout
                 error = f"{type(e).__name__}: {e}"[:300]
+                if _unreachable(e):
+                    # Timeouts, network and auth failures won't fix themselves on retry.
+                    self.circuit.update(open=True, why=f"earlier Claude call failed ({type(e).__name__})")
+                    break
         self.last_meta.update(latency_s=round_(time.monotonic() - t0), fallback_reason=error)
         return fallback()
 
@@ -128,6 +139,13 @@ class LLMAgent:
                 "instruction": "ACCEPT the proposal, or REJECT it with a reason_code and at most one counter id."}
         return self._run(round, task, {c["id"] for c in cands}, proposal.candidate.id,
                          lambda: self.fallback.respond(round, state, feasible, proposal))
+
+
+def _unreachable(e: Exception) -> bool:
+    import anthropic
+
+    return isinstance(e, (TimeoutError, anthropic.APIConnectionError, anthropic.AuthenticationError,
+                          anthropic.PermissionDeniedError))
 
 
 def round_(x: float) -> float:

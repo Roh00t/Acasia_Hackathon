@@ -98,8 +98,17 @@ function AgentCard({ m, t0, facts }: { m: AgentMessage; t0: string; facts: strin
         {m.meta?.unverified_numbers && m.meta.unverified_numbers.length > 0 && (
           <span className="border border-pilot px-1.5 font-mono text-[11px] text-pilot">flagged: {m.meta.unverified_numbers.join(", ")}</span>
         )}
-        {m.meta?.fallback_reason && <span className="border border-crimson px-1.5 font-mono text-[11px] text-crimson">LLM reply rejected</span>}
       </div>
+      {m.meta?.fallback_reason && (
+        <p className="mt-1 text-sm text-crimson" title={m.meta.fallback_reason}>
+          {/Timeout|timed out/i.test(m.meta.fallback_reason)
+            ? "Claude agent timed out; deterministic rule agent took over."
+            : /Skipped/.test(m.meta.fallback_reason)
+              ? "Claude unreachable earlier in this run; deterministic rule agent took over."
+              : "Claude agent failed; deterministic rule agent took over."}
+          <span className="ml-1 font-mono text-[11px] text-muted">{m.meta.fallback_reason.slice(0, 80)}</span>
+        </p>
+      )}
       {facts.length > 0 && <div className="mt-1 font-mono text-[11px] text-muted">checked: {facts.join(" · ")}</div>}
     </div>
   );
