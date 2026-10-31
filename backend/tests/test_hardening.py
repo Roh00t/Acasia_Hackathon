@@ -133,6 +133,14 @@ def test_cannot_approve_an_escalation(client, row_id):
     assert client.post(f"/runs/{r['run_id']}/approve", json={"decision": "APPROVE"}).status_code == 409
 
 
+def test_vercel_requires_database_url_for_durable_storage(client, monkeypatch):
+    monkeypatch.setenv("VERCEL", "1")
+    monkeypatch.delenv("DATABASE_URL", raising=False)
+    response = client.get("/health")
+    assert response.status_code == 503
+    assert "DATABASE_URL is required" in response.json()["detail"]
+
+
 def test_timeout_opens_circuit_so_run_finishes_fast(row_id):
     """One timeout and the rest of the run goes straight to the rule agents: no 9 x 25 s hang."""
     def hangs(_):

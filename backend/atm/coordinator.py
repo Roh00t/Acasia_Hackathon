@@ -14,6 +14,7 @@ agent names: an illegal id is vetoed and logged, never acted on.
 
 from __future__ import annotations
 
+import os
 import uuid
 from pathlib import Path
 
@@ -27,7 +28,7 @@ from .schemas import AGENTS, AgentMessage, Assessment, ReasonCode, Scenario
 from .validators import assess, assess_all, total_cost
 
 MAX_ROUNDS = 3
-RUNS_DIR = Path(__file__).resolve().parents[2] / "runs"
+RUNS_DIR = Path("/tmp/atm-runs") if os.environ.get("VERCEL") == "1" else Path(__file__).resolve().parents[2] / "runs"
 OUTCOME_METRICS = ("hold_min", "fuel_hold_kg", "missed_pax", "overtime_min", "gate_change",
                    "departure_delay_min", "knock_on_min", "fuel_margin_min", "turbulence",
                    "window_load", "wake_margin_min")

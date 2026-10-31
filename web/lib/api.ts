@@ -1,6 +1,6 @@
 import type { Run } from "./types";
 
-export const API_URL = process.env.NEXT_PUBLIC_API_URL ?? "http://localhost:8010";
+export const API_URL = "/api";
 
 export type RunRequest = { row_id?: number | null; emergency: boolean; live: boolean; inject_unsafe: boolean };
 
@@ -44,7 +44,13 @@ export async function listScenarios(cause?: string, limit = 40): Promise<Scenari
   return json(await fetch(`${API_URL}/scenarios?limit=${limit}${cause ? `&cause=${cause}` : ""}`));
 }
 
-export type Health = { ok: boolean; scenarios: number; model: string; live_available: boolean };
+export type Health = {
+  ok: boolean;
+  scenarios: number;
+  model: string;
+  live_available: boolean;
+  storage: "postgres" | "memory";
+};
 
 /** Resolves to null when the API can't be reached (e.g. a static deployment). */
 export async function getHealth(): Promise<Health | null> {

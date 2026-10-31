@@ -10,13 +10,17 @@ scenario traces back to one line of the source file.
 from __future__ import annotations
 
 import argparse
+import os
+import shutil
 from functools import lru_cache
 from pathlib import Path
 
 import pandas as pd
 
-ROOT = Path(__file__).resolve().parents[2]
+BACKEND_ROOT = Path(__file__).resolve().parents[1]
+ROOT = BACKEND_ROOT if os.environ.get("VERCEL") == "1" else BACKEND_ROOT.parent
 DATA = ROOT / "data"
+DEPLOY_DATA = BACKEND_ROOT / "data"
 FLIGHTS = DATA / "flights.csv"
 SCENARIOS = DATA / "scenarios.csv"
 
@@ -102,6 +106,10 @@ def main() -> None:
     args = ap.parse_args()
     sample = build(args.per_cause)
     sample.to_csv(SCENARIOS, index=False)
+    if DEPLOY_DATA.resolve() != DATA.resolve():
+        DEPLOY_DATA.mkdir(parents=True, exist_ok=True)
+        sample.to_csv(DEPLOY_DATA / "scenarios.csv", index=False)
+        shutil.copyfile(DATA / "airports.csv", DEPLOY_DATA / "airports.csv")
     print(f"wrote {len(sample):,} rows to {SCENARIOS.relative_to(ROOT)}")
 
 

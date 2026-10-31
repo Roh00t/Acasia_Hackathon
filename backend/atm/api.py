@@ -15,7 +15,7 @@ from pydantic import BaseModel
 
 from .coordinator import RUNS_DIR, run
 from .data import load_scenarios, random_row_id
-from .log import ConsensusLog, verify
+from . import storage
 
 load_dotenv(Path(__file__).resolve().parents[2] / ".env")
 
@@ -23,7 +23,7 @@ app = FastAPI(title="ATM multi-agent negotiation")
 app.add_middleware(CORSMiddleware, allow_origins=["http://localhost:3000", "http://127.0.0.1:3000"],
                    allow_methods=["*"], allow_headers=["*"])
 
-RUNS: dict[str, dict] = {}
+RUNS = storage.MEMORY_RUNS
 
 
 class RunRequest(BaseModel):
@@ -42,9 +42,14 @@ class ApproveRequest(BaseModel):
 @app.get("/health")
 def health():
     import os
+    try:
+        storage.ensure_available()
+        mode = storage.storage_mode()
+    except storage.StorageConfigurationError as exc:
+        raise HTTPException(503, str(exc)) from exc
     return {"ok": True, "scenarios": len(load_scenarios()),
             "model": os.environ.get("ATM_MODEL", "claude-haiku-5-5"),
-            "live_available": bool(os.environ.get("ANTHROPIC_API_KEY"))}
+            "live_available": bool(os.environ.get("ANTHROPIC_API_KEY")), "storage": mode}
 
 
 @app.get("/scenarios")
@@ -61,26 +66,40 @@ def scenarios(cause: str | None = None, limit: int = 50):
 
 @app.post("/run")
 def post_run(req: RunRequest):
+    try:
+        storage.ensure_available()
+    except storage.StorageConfigurationError as exc:
+        raise HTTPException(503, str(exc)) from exc
     row_id = req.row_id or random_row_id()
     try:
-        r = run(row_id, emergency=req.emergency, live=req.live, inject_unsafe=req.inject_unsafe)
+        r = run(row_id, emergency=req.emergency, live=req.live, inject_unsafe=req.inject_unsafe,
+                write=not storage.uses_database())
     except KeyError as e:
         raise HTTPException(404, str(e))
-    RUNS[r["run_id"]] = r
+    storage.create_run(r)
     return r
 
 
 @app.get("/runs/{run_id}")
 def get_run(run_id: str):
-    if run_id not in RUNS:
+    try:
+        storage.ensure_available()
+        r = storage.get_run(run_id)
+    except storage.StorageConfigurationError as exc:
+        raise HTTPException(503, str(exc)) from exc
+    if r is None:
         raise HTTPException(404, "unknown run")
-    return RUNS[run_id]
+    return r
 
 
 @app.post("/runs/{run_id}/approve")
 def approve(run_id: str, req: ApproveRequest):
-    r = RUNS.get(run_id)
-    if not r:
+    try:
+        storage.ensure_available()
+        r = storage.get_run(run_id)
+    except storage.StorageConfigurationError as exc:
+        raise HTTPException(503, str(exc)) from exc
+    if r is None:
         raise HTTPException(404, "unknown run")
     if r.get("approval"):
         raise HTTPException(409, "run already has a decision")
@@ -88,11 +107,18 @@ def approve(run_id: str, req: ApproveRequest):
         raise HTTPException(409, "escalated run: no plan to approve; decide outside the system")
     if req.decision == "OVERRIDE" and not req.note.strip():
         raise HTTPException(422, "an override needs a note saying why")
-    log = ConsensusLog(run_id)
-    log.entries = r["log"]
-    entry = log.append("APPROVAL", req.model_dump(), sender="HUMAN")
-    log.append_to(RUNS_DIR / f"{run_id}.jsonl", entry)
-    r["chain_valid"], r["chain_first_bad"] = verify(log.entries)
-    r["chain_head"] = entry["hash"]
-    r["approval"] = req.model_dump()
-    return {"ok": True, "chain_valid": r["chain_valid"], "entry": log.entries[-1]}
+    try:
+        result = storage.approve_run(run_id, req.model_dump())
+    except storage.RunNotFoundError as exc:
+        raise HTTPException(404, "unknown run") from exc
+    except storage.RunAlreadyDecidedError as exc:
+        raise HTTPException(409, "run already has a decision") from exc
+    except storage.EscalatedRunError as exc:
+        raise HTTPException(409, "escalated run: no plan to approve; decide outside the system") from exc
+    if not storage.uses_database():
+        log_entry = result["entry"]
+        from .log import ConsensusLog
+
+        log = ConsensusLog(run_id)
+        log.append_to(RUNS_DIR / f"{run_id}.jsonl", log_entry)
+    return result

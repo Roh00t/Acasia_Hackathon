@@ -61,13 +61,22 @@ Drive into `data/` and run `uv run python -m atm.data`.
 Runway, gates, fuel, connections and crew are synthetic, seeded from each row and labelled as such. One flight at
 a time; the model does not re-sequence the whole arrival bank. All impact numbers are modelled, not measured.
 
-## Deploying the web app (Vercel)
+## Deploying the services (Vercel)
 
-- Import the repo and set **Root Directory = `web`** (framework: Next.js; build `npm run build`).
-- The scroll story is fully static: it reads `web/public/story/*.json`, `web/public/evidence/*.json` and the
-  optimised models in `web/public/models/`.
-- The console calls the Python API at `NEXT_PUBLIC_API_URL` (default `http://localhost:8010`). Without a reachable
-  API it switches to **replay mode** and replays the three real saved runs, so a static deployment still works.
-  For live runs on stage, run the API locally (`cd backend && uv run uvicorn atm.api:app --port 8010`) and open the
-  site locally, or host the API and set `NEXT_PUBLIC_API_URL` before building.
-- Never put `ANTHROPIC_API_KEY` in Vercel env for the web app; the key only belongs to the Python API.
+Import the repository root as one Vercel project. The root `vercel.json` defines two independently built
+services: `web` (Next.js) and `backend` (FastAPI). Public requests route to `web`; its `/api/*` Next.js route
+handler proxies to the internal `backend` service using the Vercel-injected `BACKEND_URL` binding. The backend
+has no public rewrite of its own. Do not define `BACKEND_URL` manually.
+
+Connect a PostgreSQL provider (for example through the Vercel Marketplace) and configure its `DATABASE_URL` for
+the backend service. The API creates its `atm_runs` and `atm_log_entries` tables automatically. Vercel requests
+fail clearly if `DATABASE_URL` is missing; local development without it uses in-memory run state. Configure
+`ANTHROPIC_API_KEY`, `ATM_MODEL` (optional), and `ATM_LOG_KEY` (recommended) for the backend service only. The web
+story remains static and reads files from `web/public/`. The console uses same-origin `/api/*` requests; when the
+backend is unavailable, it falls back to replay mode. For local `npm run dev`, the proxy targets
+`http://localhost:8010` unless `vercel dev` supplies the service binding.
+
+The backend service includes copies of `data/scenarios.csv` and `data/airports.csv` under `backend/data/`, because
+its Vercel service root is `backend`. Running `uv run python -m atm.data` refreshes these deployment copies too.
+PostgreSQL stores each run and its hash-chain entries so approvals can be handled by another function invocation;
+configure `ATM_LOG_KEY` to HMAC-sign the chain.
