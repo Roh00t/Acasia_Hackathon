@@ -1,0 +1,148 @@
+{
+  "n_per_subsystem": 50,
+  "mode": "offline",
+  "subsystems": {
+    "ROUTINE": {
+      "rows": 50,
+      "consensus_pct": 98.0,
+      "levels": {
+        "L1": 49,
+        "L2": 1
+      },
+      "mean_rounds": 2.04,
+      "validator_vetoes": 0,
+      "llm_stand_ins": 0,
+      "unsafe_plans_accepted": 0,
+      "uncoordinated_plans_broken_pct": 98.0,
+      "uncoordinated_violations": {
+        "GATE_CONFLICT": 49
+      },
+      "divert_pct": {
+        "neg": 8.0,
+        "fcfs": 8.0,
+        "fb": 8.0
+      },
+      "negotiated": {
+        "hold_min": 2.64,
+        "fuel_hold_kg": 213.4,
+        "missed_pax": 9.38,
+        "overtime_min": 4.56,
+        "gate_change": 0.9,
+        "knock_on_min": 0.54
+      },
+      "fcfs": {
+        "hold_min": 2.48,
+        "fuel_hold_kg": 207.0,
+        "missed_pax": 9.38,
+        "overtime_min": 4.56,
+        "gate_change": 0.9,
+        "knock_on_min": 0.51
+      },
+      "fallback_only": {
+        "hold_min": 2.48,
+        "fuel_hold_kg": 207.0,
+        "missed_pax": 9.38,
+        "overtime_min": 4.56,
+        "gate_change": 0.9,
+        "knock_on_min": 0.51
+      },
+      "mean_latency_s": 0.02
+    },
+    "WEATHER": {
+      "rows": 50,
+      "consensus_pct": 100.0,
+      "levels": {
+        "L1": 50
+      },
+      "mean_rounds": 2.02,
+      "validator_vetoes": 0,
+      "llm_stand_ins": 0,
+      "unsafe_plans_accepted": 0,
+      "uncoordinated_plans_broken_pct": 76.0,
+      "uncoordinated_violations": {
+        "GATE_CONFLICT": 35,
+        "TURBULENCE_SEVERE": 3,
+        "FUEL_RESERVE": 4
+      },
+      "divert_pct": {
+        "neg": 2.0,
+        "fcfs": 2.0,
+        "fb": 2.0
+      },
+      "negotiated": {
+        "hold_min": 0.88,
+        "fuel_hold_kg": 54.8,
+        "missed_pax": 6.08,
+        "overtime_min": 3.98,
+        "gate_change": 0.76,
+        "knock_on_min": 0.34
+      },
+      "fcfs": {
+        "hold_min": 0.8,
+        "fuel_hold_kg": 51.6,
+        "missed_pax": 6.08,
+        "overtime_min": 3.98,
+        "gate_change": 0.74,
+        "knock_on_min": 0.34
+      },
+      "fallback_only": {
+        "hold_min": 0.84,
+        "fuel_hold_kg": 53.2,
+        "missed_pax": 6.08,
+        "overtime_min": 3.98,
+        "gate_change": 0.74,
+        "knock_on_min": 0.34
+      },
+      "mean_latency_s": 0.01
+    },
+    "EMERGENCY": {
+      "rows": 50,
+      "consensus_pct": 74.0,
+      "levels": {
+        "L1": 37,
+        "L2": 13
+      },
+      "mean_rounds": 2.26,
+      "validator_vetoes": 0,
+      "llm_stand_ins": 0,
+      "unsafe_plans_accepted": 0,
+      "uncoordinated_plans_broken_pct": 98.0,
+      "uncoordinated_violations": {
+        "TURBULENCE_SEVERE": 6,
+        "GATE_CONFLICT": 42,
+        "FUEL_RESERVE": 23
+      },
+      "divert_pct": {
+        "neg": 56.0,
+        "fcfs": 56.0,
+        "fb": 56.0
+      },
+      "negotiated": {
+        "hold_min": 12.72,
+        "fuel_hold_kg": 1129.2,
+        "missed_pax": 46.2,
+        "overtime_min": 10.22,
+        "gate_change": 0.4,
+        "knock_on_min": 2.5
+      },
+      "fcfs": {
+        "hold_min": 12.6,
+        "fuel_hold_kg": 1124.4,
+        "missed_pax": 46.2,
+        "overtime_min": 10.1,
+        "gate_change": 0.4,
+        "knock_on_min": 3.08
+      },
+      "fallback_only": {
+        "hold_min": 12.72,
+        "fuel_hold_kg": 1129.2,
+        "missed_pax": 46.2,
+        "overtime_min": 10.22,
+        "gate_change": 0.4,
+        "knock_on_min": 2.5
+      },
+      "mean_latency_s": 0.01
+    }
+  },
+  "label": "MODELLED"
+}

@@ -2,7 +2,7 @@
 
 Oct 31, 2026 · @Rohit
 
-We build three separate agents (ATC, Pilot, Ground) that negotiate a disrupted arrival from one real 2015 DOT delay row. Deterministic code checks every safety constraint, caps the talk at 3 turns, and decides when there's no consensus. No Killswitch tie-in. Submit by 15:30.
+We build three separate agents (ATC, Pilot, Ground) that negotiate a disrupted arrival from one real 2015 DOT delay row. Deterministic code checks every safety constraint, caps the talk at 3 turns, and decides when there's no consensus. Three subsystems (Routine, Weather, and a synthetic drone-closure Emergency) show the same framework under rising severity. Submit by 15:30. Build rules for Claude Code live in `CLAUDE.md`.
 
 ## The core design decision
 
@@ -30,6 +30,30 @@ The coordinator is code, not a fourth LLM. A fourth LLM as mediator would just b
 | L3 | Escalate to the duty manager with "recommend divert" | No option passes the validators | Yes |
 
 `--offline` runs every agent at L1 with no API calls. It's the deterministic baseline, and the stage backup if the Wi-Fi dies.
+
+## Three subsystems and the drone emergency
+
+Three agents chatting won't win on its own. The same framework runs under three levels of severity, and the third gives every agent a hard trade-off.
+
+| Subsystem | Trigger | What changes | The trade-off |
+| --- | --- | --- | --- |
+| Routine | `LATE_AIRCRAFT_DELAY > 20` | The planned gate is still occupied; the ramp crew shift is ending | Gate swap vs later slot vs crew overtime |
+| Weather | `WEATHER_DELAY > 15` | The arrival cap drops (scaled by the weather minutes); a severe-turbulence window on final | Hold vs later slot, fuel, turbulence, throughput |
+| Emergency (synthetic) | Toggle on any row | A drone sighting closes the runway for 15–40 min; arrivals stack behind it; gate surge on reopening | Hold vs divert, decided by the Pilot's fuel; re-sequencing after reopening |
+
+Verified evidence for the pitch: Gatwick, Dec 2018 (about 1,000 flights and 140,000 passengers over ~33 hours); Munich, 3 Oct 2025 (23 diversions, 12 cancellations); the FAA receives more than 100 drone reports near airports a month. Leave out the unverified claims (the "75th Arsenal", the AWS data centre, "139 NMACs"). Military airfields get one future-scope line at most.
+
+**First offline batch (50 rows per subsystem, rule agents, MODELLED):**
+
+| | Routine | Weather | Emergency |
+| --- | --- | --- | --- |
+| Consensus within 3 rounds | 98% | 100% | 74% |
+| Mean rounds | 2.04 | 2.02 | 2.26 |
+| Unsafe plans accepted | 0 | 0 | 0 |
+| Siloed plans (ATC slot, planned gate, no cross-checks) that break another domain's constraint | 98% | 76% | 98% |
+| Diverts | 8% | 2% | 56% |
+
+Honest finding: on this synthetic state the negotiated plan is close to FCFS-with-validators, because the earliest legal slot usually also minimises hold, missed connections and overtime. The real gain is against the siloed status quo, where most plans break a fuel, turbulence or gate constraint that nobody checked. Routine's gate conflicts are partly by construction, so say so on the slide.
 
 ## Data gaps and organiser questions
 
@@ -65,7 +89,7 @@ One Python package, three agent calls per round, one coordinator, one log. Every
    2. Round 2: the coordinator proposes the candidate with the best combined rank that every validator passes. Each agent accepts or rejects with a reason code and may name one counter-offer.
    3. Round 3: if all three accept, that's consensus. If not, the coordinator offers the best counter-offer; failing that, the deterministic fallback picks and the log says "fallback".
 6. **Consensus log.** Append-only JSONL: message ID, round, sender, payload, validator results, and the hash of the previous line. Any edit to the log breaks the chain, which makes it tamper-evident.
-7. **UI (Streamlit).** Row picker, including a "random row" button for judges. Three agent columns, round by round. A constraint table in green and red. The final plan with a duty-manager Approve button. The log, downloadable.
+7. **UI (Next.js, reusing the Killswitch website stack).** `/` is a scroll-driven 3D story (GSAP ScrollTrigger + React Three Fiber) that replays a real saved run per subsystem. `/console` is the live judge demo: row picker and random row, emergency / live / inject toggles, three agent columns round by round, the candidate validator grid, the duty-manager Approve button, and the hash-chained log.
 
 The message every agent returns:
 
@@ -95,7 +119,7 @@ About 4 hours of build time are left, so every slot is a gate: miss it and we cu
 | Time | Rohit (coordinator and agents, M1 Pro) | Aadith (data, validators, evaluation) | Thejus (UI, pitch) |
 | --- | --- | --- | --- |
 | 11:15–11:30 | Fresh repo, `.env` gitignored, `anthropic` + `pydantic` installed, key with a spend limit | Download `flights.csv`; filter to `scenarios.csv` (qualifying rows, no October) | Ask the organisers the three questions; write the answers in this doc |
-| 11:30–12:30 | Message schemas; coordinator loop with **stub agents** that return fixed JSON; hash-chained log | Scenario builder (seeded state); candidate enumerator; the three validators with unit tests | Streamlit skeleton: row picker, three agent columns, log panel, reading a saved `run.json` |
+| 11:30–12:30 | Message schemas; coordinator loop with **stub agents** that return fixed JSON; hash-chained log | Scenario builder (seeded state); candidate enumerator; the three validators with unit tests | Console skeleton: row picker, three agent columns, log panel, reading a saved `run.json` |
 | **12:30 gate** | One row runs end to end with stub agents and produces a log. No: cut the counter-offer step |  |  |
 | 12:30–13:45 | Replace stubs with three Haiku agents; prompts; schema validation with one retry, then fallback | Deterministic fallback and FCFS baseline; batch runner over N rows | Wire the UI to live runs; constraint table in green and red; Approve button |
 | 13:45–14:15 | All: lunch, then record a backup screen video of one full negotiation |  |  |
@@ -153,7 +177,7 @@ The $50 runs out on coding, not on the agents. One negotiation is at most 9 Haik
 - Run the batch once, save the results, and demo from live single runs. Don't re-run the batch on stage.
 - Keys live in a gitignored `.env`, never in slides or commits.
 
-Stack: Python 3, `pandas`, `pydantic` (message schemas), `anthropic`, `streamlit`, `pytest` for the validators. Install it all in the first 15 minutes.
+Stack: Python 3.12 via `uv`, `pandas`, `pydantic` (message schemas), `anthropic`, `fastapi`, `pytest`; Next.js 16 + React Three Fiber + GSAP for the web app (versions pinned to the Killswitch website).
 
 - [ ] Organiser answers on synthetic state, the meaning of "3 turns", and showcase vs batch written in this doc
 - [ ] `flights.csv` downloaded and filtered to `scenarios.csv`

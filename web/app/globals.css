@@ -1,0 +1,59 @@
+@import "tailwindcss";
+
+/* Ops-console tokens, adapted from the Killswitch design system. */
+@theme {
+  --color-*: initial;
+  --color-carbon: #090a0c;
+  --color-slate: #12151a;
+  --color-tactical: #1f242d;
+  --color-primary: #f0f2f5;
+  --color-muted: #8b949e;
+  --color-crimson: #ff3b30;
+  --color-ok: #34d399;
+  /* One colour per organisation, used everywhere that agent appears. */
+  --color-atc: #00e5ff;
+  --color-pilot: #ffb020;
+  --color-ground: #7ee787;
+
+  --radius-*: initial;
+  --radius-sm: 2px;
+
+  --font-weight-*: initial;
+  --font-weight-light: 300;
+  --font-weight-normal: 400;
+  --font-weight-medium: 500;
+
+  --text-2xs: 0.625rem;
+  --text-2xs--line-height: 1rem;
+  --tracking-telemetry: 0.18em;
+  --container-frame: 90rem;
+}
+
+@theme inline {
+  --font-sans: var(--font-geist-sans), ui-sans-serif, system-ui, sans-serif;
+  --font-mono: var(--font-geist-mono), ui-monospace, monospace;
+}
+
+@layer base {
+  :root {
+    color-scheme: dark;
+  }
+  *,
+  ::after,
+  ::before {
+    border-color: var(--color-tactical);
+  }
+  body {
+    background: var(--color-carbon);
+    color: var(--color-primary);
+  }
+}
+
+@utility label {
+  font-family: var(--font-mono);
+  font-size: var(--text-2xs);
+  line-height: var(--text-2xs--line-height);
+  letter-spacing: var(--tracking-telemetry);
+  text-transform: uppercase;
+  color: var(--color-muted);
+}
