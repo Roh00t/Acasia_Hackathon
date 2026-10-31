@@ -1,0 +1,165 @@
+{
+  "n_per_subsystem": 20,
+  "mode": "live",
+  "model": "claude-opus-5-5",
+  "subsystems": {
+    "ROUTINE": {
+      "rows": 20,
+      "consensus_pct": 100.0,
+      "levels": {
+        "L0": 20
+      },
+      "mean_rounds": 2.05,
+      "validator_vetoes": 0,
+      "llm_stand_ins": 0,
+      "unsafe_plans_accepted": 0,
+      "uncoordinated_plans_broken_pct": 100.0,
+      "uncoordinated_violations": {
+        "GATE_CONFLICT": 20
+      },
+      "divert_pct": {
+        "neg": 10.0,
+        "fcfs": 10.0,
+        "fb": 10.0
+      },
+      "negotiated": {
+        "hold_min": 2.9,
+        "fuel_hold_kg": 224.0,
+        "missed_pax": 10.6,
+        "overtime_min": 3.05,
+        "gate_change": 0.9,
+        "knock_on_min": 0.64
+      },
+      "fcfs": {
+        "hold_min": 2.3,
+        "fuel_hold_kg": 200.0,
+        "missed_pax": 10.6,
+        "overtime_min": 2.65,
+        "gate_change": 0.9,
+        "knock_on_min": 0.59
+      },
+      "fallback_only": {
+        "hold_min": 2.3,
+        "fuel_hold_kg": 200.0,
+        "missed_pax": 10.6,
+        "overtime_min": 2.65,
+        "gate_change": 0.9,
+        "knock_on_min": 0.59
+      },
+      "mean_latency_s": 20.99,
+      "tokens": {
+        "input": 207713,
+        "output": 25523,
+        "cache_read": 149896
+      },
+      "est_cost_usd_per_negotiation": 0.0686
+    },
+    "WEATHER": {
+      "rows": 20,
+      "consensus_pct": 100.0,
+      "levels": {
+        "L0": 20
+      },
+      "mean_rounds": 2,
+      "validator_vetoes": 0,
+      "llm_stand_ins": 0,
+      "unsafe_plans_accepted": 0,
+      "uncoordinated_plans_broken_pct": 70.0,
+      "uncoordinated_violations": {
+        "GATE_CONFLICT": 14,
+        "TURBULENCE_SEVERE": 1
+      },
+      "divert_pct": {
+        "neg": 0.0,
+        "fcfs": 0.0,
+        "fb": 0.0
+      },
+      "negotiated": {
+        "hold_min": 1.9,
+        "fuel_hold_kg": 76.0,
+        "missed_pax": 3.75,
+        "overtime_min": 3.85,
+        "gate_change": 0.7,
+        "knock_on_min": 0.4
+      },
+      "fcfs": {
+        "hold_min": 1.5,
+        "fuel_hold_kg": 60.0,
+        "missed_pax": 3.75,
+        "overtime_min": 3.55,
+        "gate_change": 0.7,
+        "knock_on_min": 0.52
+      },
+      "fallback_only": {
+        "hold_min": 1.5,
+        "fuel_hold_kg": 60.0,
+        "missed_pax": 3.75,
+        "overtime_min": 3.55,
+        "gate_change": 0.7,
+        "knock_on_min": 0.52
+      },
+      "mean_latency_s": 20.02,
+      "tokens": {
+        "input": 154998,
+        "output": 25415,
+        "cache_read": 146240
+      },
+      "est_cost_usd_per_negotiation": 0.0579
+    },
+    "EMERGENCY": {
+      "rows": 20,
+      "consensus_pct": 95.0,
+      "levels": {
+        "L0": 19,
+        "L2": 1
+      },
+      "mean_rounds": 2.1,
+      "validator_vetoes": 0,
+      "llm_stand_ins": 0,
+      "unsafe_plans_accepted": 0,
+      "uncoordinated_plans_broken_pct": 100.0,
+      "uncoordinated_violations": {
+        "TURBULENCE_SEVERE": 2,
+        "GATE_CONFLICT": 17,
+        "FUEL_RESERVE": 13
+      },
+      "divert_pct": {
+        "neg": 70.0,
+        "fcfs": 65.0,
+        "fb": 65.0
+      },
+      "negotiated": {
+        "hold_min": 6.8,
+        "fuel_hold_kg": 1012.6,
+        "missed_pax": 53.95,
+        "overtime_min": 6.15,
+        "gate_change": 0.3,
+        "knock_on_min": 1.51
+      },
+      "fcfs": {
+        "hold_min": 9.0,
+        "fuel_hold_kg": 1039.8,
+        "missed_pax": 52.05,
+        "overtime_min": 7.0,
+        "gate_change": 0.35,
+        "knock_on_min": 3.73
+      },
+      "fallback_only": {
+        "hold_min": 9.0,
+        "fuel_hold_kg": 1039.8,
+        "missed_pax": 52.05,
+        "overtime_min": 7.0,
+        "gate_change": 0.35,
+        "knock_on_min": 3.73
+      },
+      "mean_latency_s": 20.4,
+      "tokens": {
+        "input": 77517,
+        "output": 25539,
+        "cache_read": 153552
+      },
+      "est_cost_usd_per_negotiation": 0.0426
+    }
+  },
+  "label": "MODELLED"
+}

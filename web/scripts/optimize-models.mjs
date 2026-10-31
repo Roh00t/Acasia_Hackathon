@@ -7,6 +7,7 @@ import { NodeIO } from "@gltf-transform/core";
 import { ALL_EXTENSIONS } from "@gltf-transform/extensions";
 import { dedup, prune, weld, simplify, quantize, meshopt, resample, textureCompress } from "@gltf-transform/functions";
 import { MeshoptEncoder, MeshoptSimplifier } from "meshoptimizer";
+import sharp from "sharp";
 
 const RAW = "../assets/raw";
 const OUT = "public/models";
@@ -24,7 +25,7 @@ for (const file of (await readdir(RAW)).filter((f) => f.toLowerCase().endsWith("
     weld(),
     simplify({ simplifier: MeshoptSimplifier, ratio: 0.5, error: 0.001 }),
     resample(),
-    textureCompress({ targetFormat: "webp", resize: [1024, 1024] }),
+    textureCompress({ encoder: sharp, targetFormat: "webp", resize: [1024, 1024] }),
     quantize(),
     meshopt({ encoder: MeshoptEncoder }),
   );

@@ -1,7 +1,7 @@
 """Honest evaluation: run many rows per subsystem and compare against baselines.
 
   uv run python -m atm.batch --n 50                  # offline, 50 rows x 3 subsystems
-  uv run python -m atm.batch --n 20 --live           # costs API credits
+  uv run python -m atm.batch --n 20 --live --workers 6 --out ../web/public/evidence/batch-live.json
   uv run python -m atm.batch --n 50 --out ../web/public/evidence/batch.json
 
 Methods compared on identical seeded scenarios:
@@ -16,9 +16,11 @@ from __future__ import annotations
 
 import argparse
 import json
+import os
 import statistics
 import time
 from collections import Counter
+from concurrent.futures import ThreadPoolExecutor, as_completed
 from pathlib import Path
 
 from dotenv import load_dotenv
@@ -29,6 +31,8 @@ from .data import load_scenarios
 load_dotenv(Path(__file__).resolve().parents[2] / ".env")
 
 METRICS = ("hold_min", "fuel_hold_kg", "missed_pax", "overtime_min", "gate_change", "knock_on_min")
+# USD per million tokens: input, output, cache read. For the cost estimate only.
+PRICES = {"claude-opus-5-5": (4.0, 20.0, 0.20), "claude-haiku-5-5": (0.10, 0.50, 0.01)}
 
 
 def pick_rows(n: int, seed: int = 7) -> dict[str, list[int]]:
@@ -44,19 +48,44 @@ def _mean(xs):
     return round(statistics.mean(xs), 2) if xs else None
 
 
-def evaluate(n: int, live: bool) -> dict:
-    out = {"n_per_subsystem": n, "mode": "live" if live else "offline", "subsystems": {}, "label": "MODELLED"}
+def _usage(r: dict) -> tuple[int, int, int]:
+    tin = tout = tcache = 0
+    for e in r["log"]:
+        u = e["payload"].get("meta", {}).get("usage", {}) if e["kind"] == "MESSAGE" else {}
+        tin, tout, tcache = tin + u.get("input", 0), tout + u.get("output", 0), tcache + u.get("cache_read", 0)
+    return tin, tout, tcache
+
+
+def _timed_run(rid: int, emergency: bool, live: bool) -> tuple[dict, float]:
+    t0 = time.monotonic()
+    r = run(int(rid), emergency=emergency, live=live, write=False)
+    return r, time.monotonic() - t0
+
+
+def evaluate(n: int, live: bool, workers: int = 1) -> dict:
+    model = os.environ.get("ATM_MODEL", "claude-haiku-5-5") if live else None
+    out = {"n_per_subsystem": n, "mode": "live" if live else "offline", "model": model,
+           "subsystems": {}, "label": "MODELLED"}
     for sub, rows in pick_rows(n).items():
+        results = []
+        with ThreadPoolExecutor(max_workers=max(1, workers)) as pool:
+            futures = {pool.submit(_timed_run, rid, sub == "EMERGENCY", live): rid for rid in rows}
+            for done in as_completed(futures):
+                r, secs = done.result()
+                results.append((r, secs))
+                print(f"[{sub}] {len(results)}/{len(rows)} row {futures[done]} -> {r['outcome']['level']} "
+                      f"in {secs:.0f}s", flush=True)
         levels, rounds, vetoes, unsafe, diverts, latency = Counter(), [], 0, 0, Counter(), []
         neg = {m: [] for m in METRICS}
         base = {m: [] for m in METRICS}
         fb = {m: [] for m in METRICS}
         stand_ins = 0
         silo_broken, silo_codes = 0, Counter()
-        for rid in rows:
-            t0 = time.monotonic()
-            r = run(int(rid), emergency=sub == "EMERGENCY", live=live, write=False)
-            latency.append(time.monotonic() - t0)
+        tokens = [0, 0, 0]
+        for r, secs in results:
+            latency.append(secs)
+            for i, v in enumerate(_usage(r)):
+                tokens[i] += v
             o = r["outcome"]
             levels[o["level"]] += 1
             rounds.append(o["rounds_used"])
@@ -92,15 +121,23 @@ def evaluate(n: int, live: bool) -> dict:
             "fcfs": {m: _mean(v) for m, v in base.items()},
             "fallback_only": {m: _mean(v) for m, v in fb.items()},
             "mean_latency_s": _mean(latency),
+            "tokens": {"input": tokens[0], "output": tokens[1], "cache_read": tokens[2]},
         }
+        if model in PRICES:
+            pin, pout, pcache = PRICES[model]
+            cost = (tokens[0] * pin + tokens[1] * pout + tokens[2] * pcache) / 1e6
+            out["subsystems"][sub]["est_cost_usd_per_negotiation"] = round(cost / k, 4)
     return out
 
 
 def print_table(res: dict) -> None:
-    print(f"\nBatch ({res['mode']}, {res['n_per_subsystem']} rows per subsystem). Impact is MODELLED.\n")
+    print(f"\nBatch ({res['mode']}{', ' + res['model'] if res.get('model') else ''}, "
+          f"{res['n_per_subsystem']} rows per subsystem). Impact is MODELLED.\n")
     for sub, s in res["subsystems"].items():
         print(f"[{sub}] consensus {s['consensus_pct']}%  levels {s['levels']}  mean rounds {s['mean_rounds']}  "
               f"vetoes {s['validator_vetoes']}  unsafe accepted {s['unsafe_plans_accepted']}  divert% {s['divert_pct']}")
+        print(f"   stand-ins {s['llm_stand_ins']}  mean latency {s['mean_latency_s']}s  tokens {s['tokens']}"
+              + (f"  est ${s['est_cost_usd_per_negotiation']}/negotiation" if "est_cost_usd_per_negotiation" in s else ""))
         print(f"   siloed status quo (ATC slot, planned gate, no cross-checks): {s['uncoordinated_plans_broken_pct']}% "
               f"of plans break another domain's constraint {s['uncoordinated_violations']}")
         print(f"   {'metric':16}{'negotiated':>12}{'fcfs':>10}{'fallback':>10}")
@@ -112,9 +149,10 @@ def main() -> None:
     ap = argparse.ArgumentParser()
     ap.add_argument("--n", type=int, default=50)
     ap.add_argument("--live", action="store_true")
+    ap.add_argument("--workers", type=int, default=1, help="Parallel negotiations (live mode)")
     ap.add_argument("--out", type=Path)
     args = ap.parse_args()
-    res = evaluate(args.n, args.live)
+    res = evaluate(args.n, args.live, args.workers)
     print_table(res)
     if args.out:
         args.out.parent.mkdir(parents=True, exist_ok=True)

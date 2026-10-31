@@ -1,12 +1,12 @@
 "use client";
 
 import { Canvas, useFrame, useThree } from "@react-three/fiber";
-import { Gltf } from "@react-three/drei";
+import { useGLTF } from "@react-three/drei";
 import { Component, Suspense, useMemo, useRef, type ReactNode } from "react";
 import * as THREE from "three";
 import { director } from "@/lib/sceneDirector";
 import { BEATS, ramp } from "@/lib/beats";
-import { MODELS } from "@/lib/models";
+import { MODELS, type ModelName, type ModelSpec } from "@/lib/models";
 import type { Run } from "@/lib/types";
 
 // World layout: runway along +x with the threshold at x = -30; approach from -x.
@@ -46,14 +46,38 @@ class ModelBoundary extends Component<{ fallback: ReactNode; children: ReactNode
   }
 }
 
+/** Fit a generated GLB to its spec: turn it, scale its longest side to
+ * `spec.size`, then centre it (aircraft, drone) or stand it on y = 0. */
+function FittedGltf({ spec, scale }: { spec: ModelSpec; scale: number }) {
+  const { scene } = useGLTF(spec.src);
+  const object = useMemo(() => {
+    const root = scene.clone(true);
+    if (spec.rotation) root.rotation.set(...spec.rotation);
+    root.updateMatrixWorld(true);
+    const box = new THREE.Box3().setFromObject(root);
+    const size = box.getSize(new THREE.Vector3());
+    const center = box.getCenter(new THREE.Vector3());
+    root.position.set(-center.x, spec.anchor === "center" ? -center.y : -box.min.y, -center.z);
+    const fitted = new THREE.Group();
+    fitted.add(root);
+    fitted.scale.setScalar(spec.size / Math.max(size.x, size.y, size.z, 1e-6));
+    return fitted;
+  }, [scene, spec]);
+  return (
+    <group scale={scale}>
+      <primitive object={object} />
+    </group>
+  );
+}
+
 /** A GLB from lib/models.ts if one is registered, else the primitive fallback. */
-function Model({ name, scale = 1, children }: { name: keyof typeof MODELS; scale?: number; children: ReactNode }) {
-  const src = MODELS[name];
-  if (!src) return <>{children}</>;
+function Model({ name, scale = 1, children }: { name: ModelName; scale?: number; children: ReactNode }) {
+  const spec = MODELS[name];
+  if (!spec) return <>{children}</>;
   return (
     <ModelBoundary fallback={children}>
       <Suspense fallback={children}>
-        <Gltf src={src} scale={scale} />
+        <FittedGltf spec={spec} scale={scale} />
       </Suspense>
     </ModelBoundary>
   );

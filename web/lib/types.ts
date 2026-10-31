@@ -108,6 +108,7 @@ export type BatchSubsystem = {
   levels: Record<string, number>;
   mean_rounds: number;
   validator_vetoes: number;
+  llm_stand_ins: number;
   unsafe_plans_accepted: number;
   uncoordinated_plans_broken_pct: number;
   uncoordinated_violations: Record<string, number>;
@@ -117,7 +118,13 @@ export type BatchSubsystem = {
   fallback_only: Record<string, number>;
 };
 
-export type Batch = { n_per_subsystem: number; mode: string; label: string; subsystems: Record<Subsystem, BatchSubsystem> };
+export type Batch = {
+  n_per_subsystem: number;
+  mode: string;
+  model?: string | null;
+  label: string;
+  subsystems: Record<Subsystem, BatchSubsystem>;
+};
 
 export const AGENT_COLOR: Record<AgentName, string> = {
   ATC: "var(--color-atc)",

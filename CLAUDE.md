@@ -35,7 +35,9 @@ Synthetic state is seeded by `(ROW_ID, subsystem)`: same row → same state. Eve
 
 ## Agents
 
-- Model `claude-haiku-5-5` (override with `ATM_MODEL`). Haiku 5.5 rejects `temperature`/`top_p`/`top_k`: don't send them.
+- Code default is `claude-haiku-5-5`; the team runs **`claude-opus-5-5`** via `ATM_MODEL` in `.env` (chosen 31 Oct for
+  live demo quality, about $0.05 per negotiation vs about $0.0013 on Haiku). Neither model accepts `temperature`/`top_p`/`top_k`:
+  don't send them. Always state which model produced which numbers.
 - Structured output via `client.messages.parse(..., output_format=LLMReply)`; system prompt cached.
 - Domain slicing in `agents/views.py`: Pilot never sees gates/crew, Ground never sees fuel. Keep it that way;
   it is the evidence that this is not "three roles in one prompt".
@@ -48,7 +50,8 @@ cd backend && uv sync
 uv run python -m atm.data                         # rebuild data/scenarios.csv from data/flights.csv (gitignored)
 uv run pytest                                     # validators, hash chain, coordinator guarantees
 uv run python -m atm.cli --random [--emergency] [--inject-unsafe] [--live]
-uv run python -m atm.batch --n 50 --out ../web/public/evidence/batch.json
+uv run python -m atm.batch --n 50 --out ../web/public/evidence/batch.json            # offline rule agents
+uv run python -m atm.batch --n 20 --live --workers 6 --out ../web/public/evidence/batch-live.json  # ~$3 on Opus 5.5
 uv run uvicorn atm.api:app --reload --port 8010   # API for /console (8000 is often taken)
 cd web && npm install && npm run dev              # http://localhost:3000 (story) and /console
 ```

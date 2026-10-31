@@ -80,7 +80,10 @@ export default function StoryPage() {
         .then((r) => (r.ok ? r.json() : null))
         .then((j) => j && setRuns((prev) => ({ ...prev, [s]: j }))),
     );
-    fetch("/evidence/batch.json").then((r) => (r.ok ? r.json() : null)).then(setBatch);
+    // Prefer the live-agent batch; fall back to the offline rule-agent batch.
+    fetch("/evidence/batch-live.json")
+      .then((r) => (r.ok ? r.json() : fetch("/evidence/batch.json").then((o) => (o.ok ? o.json() : null))))
+      .then(setBatch);
   }, []);
 
   // Scroll drives the shared director; the canvas and copy follow its damped value.
@@ -272,7 +275,9 @@ export default function StoryPage() {
               <table className="w-full font-mono text-xs">
                 <thead>
                   <tr className="text-left">
-                    <th className="label py-1 font-normal">{batch.n_per_subsystem} rows each · {batch.mode}</th>
+                    <th className="label py-1 font-normal">
+                      {batch.n_per_subsystem} rows each · {batch.mode}{batch.model ? ` · ${batch.model}` : ""}
+                    </th>
                     {SUBSYSTEMS.map((x) => <th key={x} className="label py-1 text-right font-normal">{x}</th>)}
                   </tr>
                 </thead>
@@ -283,6 +288,9 @@ export default function StoryPage() {
                     ["Unsafe plans accepted", (b) => b.unsafe_plans_accepted],
                     ["Siloed plans that break a constraint", (b) => `${b.uncoordinated_plans_broken_pct}%`],
                     ["Diverts (negotiated)", (b) => `${b.divert_pct.neg}%`],
+                    ...(batch.mode === "live"
+                      ? ([["LLM replies replaced by rule agents", (b) => b.llm_stand_ins]] as [string, (b: Batch["subsystems"][Subsystem]) => React.ReactNode][])
+                      : []),
                   ] as [string, (b: Batch["subsystems"][Subsystem]) => React.ReactNode][]).map(([label, f]) => (
                     <tr key={label} className="border-t">
                       <td className="py-1 text-muted">{label}</td>
