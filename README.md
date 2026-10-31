@@ -2,6 +2,8 @@
 
 Autonomous SG 2026 · Airbus track · Challenge #2.
 
+[Website](https://acasiahackathon.vercel.app/) · [Canva presentation](https://canva.link/5m7ex0ekavm6kiy)
+
 When weather, a late inbound aircraft or a runway closure hits an arrival hub, ATC, the flight crew and ramp
 control renegotiate by phone while the aircraft holds. Here three **independent** AI agents (ATC, Pilot, Ground)
 negotiate a revised arrival slot, gate or divert from a real 2015 US DOT delay row in at most 3 rounds.
