@@ -25,9 +25,9 @@ const COLOR = {
   ground: "#7ee787",
   crimson: "#ff3b30",
   amber: "#ffb23a",
-  runway: "#30353d",
-  ground_plane: "#1c2128",
-  terminal: "#3b4350",
+  runway: "#3b414a",
+  ground_plane: "#20262e",
+  terminal: "#4a5362",
 };
 
 const RUNWAY_DRY = new THREE.Color(COLOR.runway);
@@ -37,15 +37,18 @@ const RUNWAY_OPEN = new THREE.Color("#1f5a34");
 // Camera keyframes per phase: [position, lookAt]. Disruption has one per subsystem.
 type Key = [[number, number, number], [number, number, number]];
 const CAM: Record<string, Key> = {
-  intro: [[-6, 34, 58], [0, 0, 0]],
-  title: [[-40, 26, 58], [-30, 2, 0]],
-  "disruption-ROUTINE": [[2, 15, 22], [-6, 0, -9]],
-  "disruption-WEATHER": [[-132, 14, 26], [-100, 8, 0]],
-  "disruption-EMERGENCY": [[-14, 11, 24], [-24, 3, 2]],
-  validators: [[0, 50, 20], [0, 0, -4]],
-  negotiation: [[-36, 24, 46], [-40, 6, 4]],
-  outcome: [[6, 16, 30], [-10, 0, -4]],
-  outro: [[28, 42, 56], [0, 0, -2]],
+  intro: [[12, 34, 50], [8, 0, -12]],
+  "disruption-ROUTINE": [[2, 30, 40], [0, 0, -11]],
+  "disruption-EMERGENCY": [[-14, 17, 40], [-20, 4, 4]],
+  validators: [[-1, 62, 18], [-1, 0, -6]],
+  outro: [[14, 38, 54], [8, 0, -12]],
+};
+// Shots that track the chapter's aircraft: [look offset from the aircraft, camera offset from the look point].
+const FOLLOW: Record<string, Key> = {
+  title: [[-2, -1, 0], [10, 9, 30]],
+  "disruption-WEATHER": [[2, -1, 0], [-16, 5, 24]],
+  negotiation: [[0, -1, 0], [8, 12, 34]],
+  outcome: [[-1, -1, -2], [8, 13, 30]],
 };
 
 class ModelBoundary extends Component<{ fallback: ReactNode; children: ReactNode }, { failed: boolean }> {
@@ -272,9 +275,9 @@ const lerp3 = (out: THREE.Vector3, a: [number, number, number], b: [number, numb
 const ease = (t: number) => t * t * (3 - 2 * t);
 const easeOut = (t: number) => 1 - (1 - t) * (1 - t);
 
-const FINAL: [number, number, number] = [-100, 12, 0];
-const HOLD_ENTRY: [number, number, number] = [-60, 9, 0];
-const HOLD_CENTER = { x: -60, y: 9, z: 10, r: 10 };
+const FINAL: [number, number, number] = [-78, 10, 0];
+const HOLD_ENTRY: [number, number, number] = [-50, 7.5, 0];
+const HOLD_CENTER = { x: -50, y: 7.5, z: 9, r: 9 };
 
 /** The shared landing: glide path, flare, touchdown, rollout, taxi to the agreed gate. */
 function landingPos(out: THREE.Vector3, u: number, gx: number) {
@@ -322,7 +325,7 @@ function Scene({ chapters, reduced }: { chapters: (StoryChapter | null)[]; reduc
   // Shift the render right on wide screens so the left column of text never covers the action.
   useEffect(() => {
     const cam = camera as THREE.PerspectiveCamera;
-    if (size.width >= 900) cam.setViewOffset(size.width, size.height, -size.width * 0.17, 0, size.width, size.height);
+    if (size.width >= 900) cam.setViewOffset(size.width, size.height, -size.width * 0.2, 0, size.width, size.height);
     else cam.clearViewOffset();
     cam.updateProjectionMatrix();
   }, [camera, size]);
@@ -347,11 +350,19 @@ function Scene({ chapters, reduced }: { chapters: (StoryChapter | null)[]; reduc
   const closure = useRef(0);
   const flash = useRef(0);
   const look = useMemo(() => new THREE.Vector3(), []);
-  const tmpA = useMemo(() => new THREE.Vector3(), []);
   const tmpB = useMemo(() => new THREE.Vector3(), []);
   const ahead = useMemo(() => new THREE.Vector3(), []);
+  const camPosA = useMemo(() => new THREE.Vector3(), []);
+  const camPosB = useMemo(() => new THREE.Vector3(), []);
+  const camAtA = useMemo(() => new THREE.Vector3(), []);
+  const camAtB = useMemo(() => new THREE.Vector3(), []);
+  const ring = useRef<THREE.Mesh>(null);
+  const glow = useMemo(() => {
+    const tex = cloudTexture();
+    return new THREE.SpriteMaterial({ map: tex, color: "#fff4d6", transparent: true, depthWrite: false, blending: THREE.AdditiveBlending });
+  }, []);
 
-  const ATC_POS = useMemo(() => new THREE.Vector3(22, 13, -8), []);
+  const ATC_POS = useMemo(() => new THREE.Vector3(16, 10.6, -24), []);
   const GROUND_POS = useMemo(() => new THREE.Vector3(0, 4.2, -16), []);
 
   useFrame(({ clock }, dt) => {
@@ -376,8 +387,8 @@ function Scene({ chapters, reduced }: { chapters: (StoryChapter | null)[]; reduc
 
     if (!reduced && rain.current > 0.6 && Math.random() < dt / 7) flash.current = 1;
     flash.current = Math.max(0, flash.current - dt * 10);
-    if (hemi.current) hemi.current.intensity = 1.15 * (1 - 0.5 * rain.current) + flash.current * 2.5;
-    if (sun.current) sun.current.intensity = 1.7 * (1 - 0.45 * rain.current);
+    if (hemi.current) hemi.current.intensity = 1.5 * (1 - 0.45 * rain.current) + flash.current * 2.5;
+    if (sun.current) sun.current.intensity = 2.2 * (1 - 0.4 * rain.current);
     if (fog.current) fog.current.far = 200 - 120 * rain.current;
     if (runwayMat.current) {
       if (reopened) runwayMat.current.color.copy(RUNWAY_OPEN);
@@ -387,21 +398,28 @@ function Scene({ chapters, reduced }: { chapters: (StoryChapter | null)[]; reduc
     }
 
     // ---- camera
-    const keyOf = (b: (typeof BEATS)[number]) => {
-      if (b.phase === "disruption") {
-        const s = b.chapter !== null ? chapters[b.chapter]?.subsystem : "ROUTINE";
-        return CAM[`disruption-${s ?? "ROUTINE"}`];
+    // Fixed shots come from CAM; follow shots keep the aircraft at about 70% of the screen width,
+    // right of the text column (the render is offset right on wide screens).
+    const planePos = focal.current?.position;
+    const shot = (b: (typeof BEATS)[number], pos: THREE.Vector3, at: THREE.Vector3) => {
+      const sub2 = b.chapter !== null ? chapters[b.chapter]?.subsystem ?? "ROUTINE" : "ROUTINE";
+      const key = b.phase === "disruption" ? `disruption-${sub2}` : b.phase;
+      const follow = FOLLOW[key];
+      if (follow && planePos) {
+        at.copy(planePos).add(tmpB.set(...follow[0]));
+        pos.copy(at).add(tmpB.set(...follow[1]));
+        return;
       }
-      return CAM[b.phase];
+      const fixed = CAM[key] ?? CAM.intro;
+      pos.set(...fixed[0]);
+      at.set(...fixed[1]);
     };
     const next = BEATS[Math.min(bi + 1, BEATS.length - 1)];
     const f = ramp(u, 0.6, 1);
-    const [pa, la] = keyOf(beat);
-    const [pb, lb] = keyOf(next);
-    lerp3(tmpA, pa, pb, f);
-    camera.position.lerp(tmpA, 0.08);
-    lerp3(tmpA, la, lb, f);
-    look.lerp(tmpA, 0.08);
+    shot(beat, camPosA, camAtA);
+    shot(next, camPosB, camAtB);
+    camera.position.lerp(camPosA.lerp(camPosB, f), 0.08);
+    look.lerp(camAtA.lerp(camAtB, f), 0.08);
     camera.lookAt(look);
 
     // ---- the chapter's aircraft
@@ -409,9 +427,9 @@ function Scene({ chapters, reduced }: { chapters: (StoryChapter | null)[]; reduc
     if (g) {
       const holds = (chosen?.metrics.hold_min ?? 0) > 0;
       const pose = (q: number, out: THREE.Vector3) => {
-        if (beat.phase === "intro") return lerp3(out, [-130, 14, 0], FINAL, ease(u));
+        if (beat.phase === "intro") return lerp3(out, [-105, 12, 0], FINAL, ease(u));
         if (beat.phase === "outro" || !run) return out.set(gateX(chapters[2]?.live.outcome.candidate?.gate ?? "A3"), GROUND_Y, STAND_Z);
-        if (beat.phase === "title") return lerp3(out, [-130, 14, 0], FINAL, ease(q));
+        if (beat.phase === "title") return lerp3(out, [-105, 12, 0], FINAL, ease(q));
         if (beat.phase === "outcome") {
           if (chosen?.kind === "DIVERT") return lerp3(out, HOLD_ENTRY, [-130, 18, 60], ease(q));
           return landingPos(out, q, gateX(chosen?.gate));
@@ -432,14 +450,14 @@ function Scene({ chapters, reduced }: { chapters: (StoryChapter | null)[]; reduc
     queue.current?.children.forEach((c, i) => {
       if (closure.current > 0.5) {
         const th = t * 0.35 + (i * Math.PI) / 2;
-        c.position.set(-78 + Math.cos(th) * 8, 12 + i * 1.6, 20 + Math.sin(th) * 8);
+        c.position.set(-10 + Math.cos(th) * 6.5, 11 + i * 1.8, 18 + Math.sin(th) * 6.5);
         c.rotation.set(0, -th - Math.PI / 2, -0.25);
         c.visible = true;
         return;
       }
       const spacing = 1 / (4 * ratio);
       const uu = (t * 0.016 * ratio + i * spacing) % 1;
-      c.position.set(-140 + 100 * uu, 13 * (1 - uu) + 1.5, 0);
+      c.position.set(-115 + 80 * uu, 11 * (1 - uu) + 1.5, 0);
       c.rotation.set(0, 0, 0);
       c.visible = i < Math.max(2, Math.round(4 * ratio)) && uu < 0.92;
     });
@@ -483,6 +501,11 @@ function Scene({ chapters, reduced }: { chapters: (StoryChapter | null)[]; reduc
       droneB.current.position.set(-10 + Math.cos(t * 0.8) * 2, 4.6 + Math.cos(t * 1.9) * 0.3 + leave, -2.5);
     }
     if (droneLight.current) droneLight.current.emissiveIntensity = Math.sin(t * 10) > 0 ? 4 : 0.2;
+    if (ring.current) {
+      const pulse = (t * 0.8) % 1;
+      ring.current.scale.setScalar(1 + pulse * 1.6);
+      (ring.current.material as THREE.MeshBasicMaterial).opacity = 0.7 * (1 - pulse);
+    }
 
     // ---- agent nodes and message packets while they negotiate
     if (pilotNode.current && g) pilotNode.current.position.copy(g.position).add(tmpB.set(0, 1.6, 0));
@@ -499,8 +522,8 @@ function Scene({ chapters, reduced }: { chapters: (StoryChapter | null)[]; reduc
     <>
       <color attach="background" args={["#090a0c"]} />
       <fog ref={fog} attach="fog" args={["#0b0e12", 60, 200]} />
-      <hemisphereLight ref={hemi} args={["#c9d6e6", "#1a1f26", 1.15]} />
-      <directionalLight ref={sun} position={[20, 40, 20]} intensity={1.7} />
+      <hemisphereLight ref={hemi} args={["#d3deeb", "#1e242c", 1.5]} />
+      <directionalLight ref={sun} position={[20, 40, 20]} intensity={2.2} />
 
       {/* Ground, runway, threshold stripes, centreline, edge lights */}
       <mesh rotation={[-Math.PI / 2, 0, 0]} position={[0, -0.01, 0]}>
@@ -583,15 +606,15 @@ function Scene({ chapters, reduced }: { chapters: (StoryChapter | null)[]; reduc
       </group>
 
       {/* Control tower = ATC; approach radar; joint-use apron in the far corner */}
-      <group position={[22, 0, -8]}>
-        <Model name="tower" scale={1.2}>
+      <group position={[16, 0, -24]}>
+        <Model name="tower" scale={0.9}>
           <mesh position={[0, 4, 0]}>
             <cylinderGeometry args={[0.6, 0.9, 8, 12]} />
             <meshStandardMaterial color="#2b313b" />
           </mesh>
         </Model>
       </group>
-      <group position={[36, 0, 12]}>
+      <group position={[-10, 0, -26]}>
         <Model name="radarTower">
           <mesh position={[0, 3, 0]}>
             <cylinderGeometry args={[0.5, 0.8, 6, 10]} />
@@ -602,8 +625,8 @@ function Scene({ chapters, reduced }: { chapters: (StoryChapter | null)[]; reduc
           <Label text="APPROACH RADAR" color="#8d97a3" />
         </group>
       </group>
-      <group position={[46, 0, -32]} rotation={[0, -Math.PI / 5, 0]}>
-        <Model name="jointApron">
+      <group position={[29, 0, -12]} rotation={[0, -Math.PI / 4, 0]}>
+        <Model name="jointApron" scale={0.85}>
           <mesh position={[0, 2, 0]}>
             <boxGeometry args={[8, 4, 6]} />
             <meshStandardMaterial color="#2b313b" />
@@ -654,6 +677,7 @@ function Scene({ chapters, reduced }: { chapters: (StoryChapter | null)[]; reduc
       {/* The chapter's flight and the traffic around it */}
       <group ref={focal}>
         <Plane scale={1.2} />
+        <sprite material={glow} position={[2.1, -0.15, 0]} scale={[2.6, 2.6, 1]} />
       </group>
       <group ref={queue}>
         {Array.from({ length: 4 }, (_, i) => (
@@ -665,19 +689,23 @@ function Scene({ chapters, reduced }: { chapters: (StoryChapter | null)[]; reduc
 
       {/* Emergency: two drone sightings near the threshold */}
       <group ref={droneA} visible={false}>
-        <Model name="drone" scale={0.6}>
+        <Model name="drone" scale={1.1}>
           <mesh>
             <boxGeometry args={[0.5, 0.12, 0.5]} />
             <meshStandardMaterial color="#444" />
           </mesh>
         </Model>
-        <mesh position={[0, -0.3, 0]}>
-          <sphereGeometry args={[0.12, 12, 12]} />
+        <mesh position={[0, -0.45, 0]}>
+          <sphereGeometry args={[0.18, 12, 12]} />
           <meshStandardMaterial ref={droneLight} color={COLOR.crimson} emissive={COLOR.crimson} />
+        </mesh>
+        <mesh ref={ring} rotation={[-Math.PI / 2, 0, 0]} position={[0, -0.6, 0]}>
+          <ringGeometry args={[1.6, 1.85, 48]} />
+          <meshBasicMaterial color={COLOR.crimson} transparent opacity={0.7} depthWrite={false} side={THREE.DoubleSide} />
         </mesh>
       </group>
       <group ref={droneB} visible={false}>
-        <Model name="droneDark" scale={0.6}>
+        <Model name="droneDark" scale={1.1}>
           <mesh>
             <boxGeometry args={[0.5, 0.12, 0.5]} />
             <meshStandardMaterial color="#333" />

@@ -40,6 +40,21 @@ export type ScenarioRow = {
   DAY: number;
 };
 
-export async function listScenarios(cause?: string): Promise<ScenarioRow[]> {
-  return json(await fetch(`${API_URL}/scenarios?limit=40${cause ? `&cause=${cause}` : ""}`));
+export async function listScenarios(cause?: string, limit = 40): Promise<ScenarioRow[]> {
+  return json(await fetch(`${API_URL}/scenarios?limit=${limit}${cause ? `&cause=${cause}` : ""}`));
+}
+
+export type Health = { ok: boolean; scenarios: number; model: string; live_available: boolean };
+
+/** Resolves to null when the API can't be reached (e.g. a static deployment). */
+export async function getHealth(): Promise<Health | null> {
+  try {
+    const ctrl = new AbortController();
+    const timer = setTimeout(() => ctrl.abort(), 2500);
+    const res = await fetch(`${API_URL}/health`, { signal: ctrl.signal });
+    clearTimeout(timer);
+    return res.ok ? ((await res.json()) as Health) : null;
+  } catch {
+    return null;
+  }
 }

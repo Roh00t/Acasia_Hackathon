@@ -55,7 +55,7 @@ function Fact({ label, value, kind }: { label: string; value: React.ReactNode; k
   );
 }
 
-function Panel({ beat, active, children, wide }: { beat: number; active: number; children: React.ReactNode; wide?: boolean }) {
+function Panel({ beat, active, children, wide, mid }: { beat: number; active: number; children: React.ReactNode; wide?: boolean; mid?: boolean }) {
   const ref = useRef<HTMLDivElement>(null);
   const on = beat === active;
   // The outgoing panel fades out first (180 ms); the incoming one waits, then reveals its lines.
@@ -77,12 +77,12 @@ function Panel({ beat, active, children, wide }: { beat: number; active: number;
       style={{
         opacity: on ? 1 : 0,
         visibility: on ? "visible" : "hidden",
-        transition: on ? "opacity 300ms ease 220ms, visibility 0s linear 220ms" : "opacity 180ms ease, visibility 0s linear 180ms",
+        transition: on ? "opacity 260ms ease 130ms, visibility 0s linear 130ms" : "opacity 130ms ease, visibility 0s linear 130ms",
       }}
       aria-hidden={!on}
     >
-      <div className="mx-auto w-full max-w-frame px-4 pt-24 md:px-8">
-        <div className={`${wide ? "max-w-[46rem]" : "max-w-[38rem]"} ${on ? "pointer-events-auto" : ""}`}>{children}</div>
+      <div className="w-full px-5 pt-24 md:pl-12 md:pr-6">
+        <div className={`${wide ? "max-w-[42rem]" : mid ? "max-w-[38rem]" : "max-w-[34rem]"} ${on ? "pointer-events-auto" : ""}`}>{children}</div>
       </div>
     </div>
   );
@@ -197,7 +197,7 @@ export default function StoryPage() {
         <Airfield chapters={chapters} />
       </div>
       {/* Keeps the copy readable over the scene; the scene itself is offset to the right. */}
-      <div className="pointer-events-none fixed inset-0 z-10 bg-[linear-gradient(90deg,rgba(9,10,12,0.94)_0%,rgba(9,10,12,0.82)_32%,rgba(9,10,12,0.25)_52%,transparent_62%)]" />
+      <div className="pointer-events-none fixed inset-0 z-10 bg-[linear-gradient(90deg,rgba(9,10,12,0.94)_0%,rgba(9,10,12,0.85)_30%,rgba(9,10,12,0.3)_46%,transparent_54%)]" />
 
       <header className="fixed inset-x-0 top-0 z-30 border-b bg-carbon/75 backdrop-blur">
         <div className="mx-auto flex max-w-frame flex-wrap items-center justify-between gap-3 px-4 py-3 md:px-8">
@@ -349,7 +349,7 @@ export default function StoryPage() {
               </Panel>
 
               {/* Validators */}
-              <Panel beat={beatIndex(c, "validators")} active={beat} wide>
+              <Panel beat={beatIndex(c, "validators")} active={beat} mid>
                 <Heading lines={[`${run.candidates.total} options.`, `${run.candidates.feasible} are legal.`]} />
                 <Card>
                   <p className="mb-3 text-lg text-primary/85">
@@ -394,7 +394,7 @@ export default function StoryPage() {
               </Panel>
 
               {/* Outcome */}
-              <Panel beat={beatIndex(c, "outcome")} active={beat} wide>
+              <Panel beat={beatIndex(c, "outcome")} active={beat} mid>
                 <Heading lines={[o.consensus ? "Consensus." : `Fallback ${o.level}.`, "A person approves."]} />
                 <Card>
                   <div className="flex flex-wrap items-center gap-3">

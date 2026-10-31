@@ -60,3 +60,14 @@ Drive into `data/` and run `uv run python -m atm.data`.
 
 Runway, gates, fuel, connections and crew are synthetic, seeded from each row and labelled as such. One flight at
 a time; the model does not re-sequence the whole arrival bank. All impact numbers are modelled, not measured.
+
+## Deploying the web app (Vercel)
+
+- Import the repo and set **Root Directory = `web`** (framework: Next.js; build `npm run build`).
+- The scroll story is fully static: it reads `web/public/story/*.json`, `web/public/evidence/*.json` and the
+  optimised models in `web/public/models/`.
+- The console calls the Python API at `NEXT_PUBLIC_API_URL` (default `http://localhost:8010`). Without a reachable
+  API it switches to **replay mode** and replays the three real saved runs, so a static deployment still works.
+  For live runs on stage, run the API locally (`cd backend && uv run uvicorn atm.api:app --port 8010`) and open the
+  site locally, or host the API and set `NEXT_PUBLIC_API_URL` before building.
+- Never put `ANTHROPIC_API_KEY` in Vercel env for the web app; the key only belongs to the Python API.

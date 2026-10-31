@@ -15,8 +15,15 @@ export function CandidateGrid({ run, highlight }: { run: Run; highlight?: string
   const byKey = new Map(grid.map((c) => [`${c.t}-${c.gate}`, c]));
   const divert = grid.find((c) => c.kind === "DIVERT");
 
+  const first = slots[0] ?? 0;
+  const last = slots[slots.length - 1] ?? 1;
+  const ticks = [4, 20, 40, 62].filter((t) => t >= first && t <= last + 2);
   return (
     <div>
+      <div className="mb-1 flex items-baseline justify-between">
+        <span className="label">Gate ↓</span>
+        <span className="label">colour = first check that failed</span>
+      </div>
       <div className="grid gap-[2px]" style={{ gridTemplateColumns: `2.2rem repeat(${slots.length}, minmax(0, 1fr))` }}>
         {gates.map((g) => (
           <div key={g} className="contents">
@@ -45,8 +52,15 @@ export function CandidateGrid({ run, highlight }: { run: Run; highlight?: string
           </div>
         ))}
       </div>
+      <div className="relative mt-1 h-4" style={{ marginLeft: "2.2rem" }}>
+        {ticks.map((t) => (
+          <span key={t} className="label absolute -translate-x-1/2" style={{ left: `${((Math.min(t, last) - first) / Math.max(1, last - first)) * 100}%` }}>
+            T+{t}
+          </span>
+        ))}
+      </div>
+      <div className="label mt-1 text-center" style={{ marginLeft: "2.2rem" }}>Landing slot, minutes from now →</div>
       <div className="mt-2 flex flex-wrap items-center gap-x-4 gap-y-1">
-        <span className="label">T+{slots[0]} → T+{slots[slots.length - 1]} min</span>
         {divert && (
           <span className="label" style={{ color: divert.ok ? "var(--color-ok)" : undefined }}>
             {divert.id}: {divert.ok ? "legal" : divert.fail}

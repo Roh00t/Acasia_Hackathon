@@ -51,8 +51,8 @@
 
 @utility label {
   font-family: var(--font-mono);
-  font-size: var(--text-2xs);
-  line-height: var(--text-2xs--line-height);
+  font-size: 0.8125rem;
+  line-height: 1.15rem;
   letter-spacing: var(--tracking-telemetry);
   text-transform: uppercase;
   color: var(--color-muted);

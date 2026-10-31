@@ -41,7 +41,10 @@ class ApproveRequest(BaseModel):
 
 @app.get("/health")
 def health():
-    return {"ok": True, "scenarios": len(load_scenarios())}
+    import os
+    return {"ok": True, "scenarios": len(load_scenarios()),
+            "model": os.environ.get("ATM_MODEL", "claude-haiku-5-5"),
+            "live_available": bool(os.environ.get("ANTHROPIC_API_KEY"))}
 
 
 @app.get("/scenarios")
