@@ -74,7 +74,12 @@ export type Run = {
       alternate_min: number;
       connections: { flight: string; pax: number; departs: number }[];
     };
-    ground: { planned_gate: string; crew_shift_end: number; turnaround_min: number; gates: { id: string; widebody: boolean }[] };
+    ground: {
+      planned_gate: string;
+      crew_shift_end: number;
+      turnaround_min: number;
+      gates: { id: string; widebody: boolean; busy?: [number, number][] }[];
+    };
     synthetic: string[];
   };
   candidates: {
@@ -140,4 +145,26 @@ export const LEVEL_TEXT: Record<Level, string> = {
   L1: "Consensus: rule agents",
   L2: "Fallback: deterministic pick",
   L3: "Escalated to duty manager",
+};
+
+/** One chapter of the scroll story: web/public/story/s{1,2,3}.json from `atm.story export`. */
+export type StoryChapter = {
+  chapter: number;
+  key: string;
+  title: "Routine" | "Weather" | "Emergency";
+  subsystem: Subsystem;
+  row_id: number;
+  model: string | null;
+  real: Record<string, string | number | null>;
+  derived: {
+    weather_share: number | null;
+    window_arrivals: number;
+    window_weather_delayed: number;
+    next_leg: { flight: string; dest: string; dep: string } | null;
+  };
+  synthetic: string[];
+  cost: { input: number; output: number; cache_read: number; usd: number };
+  latency_s: number;
+  live: Run;
+  offline: Run;
 };

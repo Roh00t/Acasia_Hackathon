@@ -1,18 +1,22 @@
-// Story beats as windows of scroll progress (0–1). The copy panels, the
-// camera keyframes and the 3D choreography all key off these.
+// Story beats as windows of scroll progress (0–1): an intro, five beats for each
+// of the three chapters (one per subsystem), and a closing evidence beat. The
+// copy panels, the camera and the 3D choreography all key off these.
 
-export const BEATS = [
-  { key: "hero", at: 0.0 },
-  { key: "row", at: 0.1 },
-  { key: "disruption", at: 0.22 },
-  { key: "validators", at: 0.36 },
-  { key: "round1", at: 0.5 },
-  { key: "rounds", at: 0.62 },
-  { key: "outcome", at: 0.76 },
-  { key: "evidence", at: 0.88 },
-] as const;
+export const PHASES = ["title", "disruption", "validators", "negotiation", "outcome"] as const;
+export type Phase = (typeof PHASES)[number];
 
-export type BeatKey = (typeof BEATS)[number]["key"];
+export type Beat = { key: string; chapter: number | null; phase: Phase | "intro" | "outro"; at: number };
+
+const keys: Omit<Beat, "at">[] = [
+  { key: "intro", chapter: null, phase: "intro" },
+  ...[0, 1, 2].flatMap((c) => PHASES.map((phase) => ({ key: `c${c}-${phase}`, chapter: c, phase }))),
+  { key: "outro", chapter: null, phase: "outro" },
+];
+
+export const BEATS: Beat[] = keys.map((b, i) => ({ ...b, at: i / keys.length }));
+
+/** Scroll progress where chapter c (0-based) starts. */
+export const chapterStart = (c: number) => BEATS.find((b) => b.chapter === c && b.phase === "title")!.at;
 
 export function beatAt(p: number): number {
   let i = 0;

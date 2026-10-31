@@ -31,7 +31,12 @@ export function CandidateGrid({ run, highlight }: { run: Run; highlight?: string
                   title={c ? `${c.id}: ${c.ok ? "legal" : c.fail}` : ""}
                   className="aspect-square rounded-sm"
                   style={{
-                    background: c?.ok ? "var(--color-ok)" : domain ? FAIL_COLOR[domain] : "transparent",
+                    // Vetoed options are struck through as well as tinted by the failing domain.
+                    background: c?.ok
+                      ? "var(--color-ok)"
+                      : domain
+                        ? `linear-gradient(135deg, transparent 44%, rgb(240 242 245 / 0.35) 46%, rgb(240 242 245 / 0.35) 54%, transparent 56%), ${FAIL_COLOR[domain]}`
+                        : "transparent",
                     outline: isHi ? "2px solid white" : undefined,
                   }}
                 />

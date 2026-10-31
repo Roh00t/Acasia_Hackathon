@@ -6,46 +6,83 @@ import { ScrollTrigger } from "gsap/ScrollTrigger";
 import dynamic from "next/dynamic";
 import Link from "next/link";
 import { useEffect, useRef, useState } from "react";
-import { BEATS, beatAt } from "@/lib/beats";
+import { BEATS, beatAt, chapterStart } from "@/lib/beats";
 import { director, stepDirector } from "@/lib/sceneDirector";
-import { SUBSYSTEMS, type Batch, type Run, type Subsystem } from "@/lib/types";
+import { AGENT_COLOR, LEVEL_TEXT, SUBSYSTEMS, type AgentMessage, type Batch, type StoryChapter, type Subsystem } from "@/lib/types";
 import { CandidateGrid } from "@/components/console/CandidateGrid";
-import { HashChain, LevelBadge, MessageCard, PlanTable, SyntheticNote, agentFacts, messageSubject } from "@/components/console/RunParts";
+import { HashChain, agentFacts, messageSubject } from "@/components/console/RunParts";
 
 gsap.registerPlugin(useGSAP, ScrollTrigger);
 
 // three.js stays out of the initial bundle and never server-renders.
 const Airfield = dynamic(() => import("./Airfield"), { ssr: false });
 
-const SUB_LABEL: Record<Subsystem, string> = {
-  ROUTINE: "Routine: late inbound",
-  WEATHER: "Weather: rate cut",
-  EMERGENCY: "Emergency: drone closure",
+const MONTHS = ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"];
+const TAGLINE: Record<Subsystem, string> = {
+  ROUTINE: "A late inbound aircraft.",
+  WEATHER: "A storm cuts arrivals.",
+  EMERGENCY: "A drone closes the runway.",
 };
+const TRIGGER: Record<Subsystem, string> = {
+  ROUTINE: "Brief trigger: LATE_AIRCRAFT_DELAY > 20",
+  WEATHER: "Brief trigger: WEATHER_DELAY > 15",
+  EMERGENCY: "Synthetic closure layered on a real row",
+};
+
+function addMin(hhmm: string, minutes: number) {
+  const [h, m] = hhmm.split(":").map(Number);
+  const tot = (h * 60 + m + Math.round(minutes) + 1440) % 1440;
+  return `${String(Math.floor(tot / 60)).padStart(2, "0")}:${String(tot % 60).padStart(2, "0")}`;
+}
+
+type Kind = "REAL" | "DERIVED" | "SYNTHETIC" | "MODELLED";
+
+function Badge({ kind }: { kind: Kind }) {
+  const color = { REAL: "var(--color-ok)", DERIVED: "var(--color-atc)", SYNTHETIC: "var(--color-pilot)", MODELLED: "var(--color-muted)" }[kind];
+  return (
+    <span className="ml-2 inline-block rounded-sm border px-1.5 align-middle font-mono text-[11px] tracking-[0.12em]" style={{ color, borderColor: color }}>
+      {kind}
+    </span>
+  );
+}
+
+function Fact({ label, value, kind }: { label: string; value: React.ReactNode; kind: Kind }) {
+  return (
+    <div className="min-w-0">
+      <div className="label">{label}<Badge kind={kind} /></div>
+      <div className="mt-1 font-mono text-lg">{value}</div>
+    </div>
+  );
+}
 
 function Panel({ beat, active, children, wide }: { beat: number; active: number; children: React.ReactNode; wide?: boolean }) {
   const ref = useRef<HTMLDivElement>(null);
   const on = beat === active;
-  // Copy plays on time, not scrub: entering a beat starts a fixed-length masked reveal.
+  // The outgoing panel fades out first (180 ms); the incoming one waits, then reveals its lines.
   useGSAP(
     () => {
       if (!on || !ref.current) return;
       const reduced = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
       gsap.fromTo(ref.current.querySelectorAll("[data-line]"), { yPercent: reduced ? 0 : 115 },
-        { yPercent: 0, duration: reduced ? 0 : 1.0, ease: "expo.out", stagger: 0.1 });
+        { yPercent: 0, duration: reduced ? 0 : 0.9, ease: "expo.out", stagger: 0.08, delay: 0.25 });
       gsap.fromTo(ref.current.querySelectorAll("[data-body]"), { opacity: 0, y: reduced ? 0 : 12 },
-        { opacity: 1, y: 0, duration: 0.8, ease: "expo.out", delay: 0.3, stagger: 0.06 });
+        { opacity: 1, y: 0, duration: 0.7, ease: "expo.out", delay: 0.45, stagger: 0.05 });
     },
     { dependencies: [on], scope: ref },
   );
   return (
     <div
       ref={ref}
-      className={`pointer-events-none absolute inset-x-0 top-0 transition-opacity duration-300 ${on ? "opacity-100" : "opacity-0"}`}
+      className="pointer-events-none absolute inset-x-0 top-0"
+      style={{
+        opacity: on ? 1 : 0,
+        visibility: on ? "visible" : "hidden",
+        transition: on ? "opacity 300ms ease 220ms, visibility 0s linear 220ms" : "opacity 180ms ease, visibility 0s linear 180ms",
+      }}
       aria-hidden={!on}
     >
       <div className="mx-auto w-full max-w-frame px-4 pt-24 md:px-8">
-        <div className={`${wide ? "max-w-3xl" : "max-w-xl"} ${on ? "pointer-events-auto" : ""}`}>{children}</div>
+        <div className={`${wide ? "max-w-[46rem]" : "max-w-[38rem]"} ${on ? "pointer-events-auto" : ""}`}>{children}</div>
       </div>
     </div>
   );
@@ -53,7 +90,7 @@ function Panel({ beat, active, children, wide }: { beat: number; active: number;
 
 function Heading({ lines }: { lines: string[] }) {
   return (
-    <h2 className="text-[clamp(2.2rem,5.5vw,4.8rem)] leading-[0.95] font-normal tracking-tighter">
+    <h2 className="text-[clamp(2.2rem,4.6vw,4.2rem)] leading-[0.98] font-normal tracking-tighter">
       {lines.map((l) => (
         <span key={l} className="-mb-[0.14em] block overflow-hidden pb-[0.14em]">
           <span data-line className="block">{l}</span>
@@ -64,21 +101,40 @@ function Heading({ lines }: { lines: string[] }) {
 }
 
 function Card({ children }: { children: React.ReactNode }) {
-  return <div data-body className="mt-6 border bg-carbon/80 p-4 backdrop-blur-sm">{children}</div>;
+  return <div data-body className="mt-6 border bg-carbon/85 p-5 backdrop-blur-sm">{children}</div>;
+}
+
+/** Agent card sized for a projector: 16 px body, the checked numbers underneath. */
+function StoryAgentCard({ m, facts, subject }: { m: AgentMessage; facts: string[]; subject?: string | null }) {
+  const tone = m.decision === "ACCEPT" ? "text-ok" : m.decision === "REJECT" ? "text-crimson" : "text-primary";
+  return (
+    <div className="min-w-0 border-l-2 bg-slate/90 px-3 py-2.5" style={{ borderColor: AGENT_COLOR[m.agent] }}>
+      <div className="flex items-baseline justify-between gap-2">
+        <span className="font-mono text-sm tracking-[0.15em]" style={{ color: AGENT_COLOR[m.agent] }}>{m.agent}</span>
+        <span className="label">{m.level === "L0" ? "LLM" : "rule"}</span>
+      </div>
+      <div className={`mt-1 font-mono text-base ${tone}`}>
+        {m.decision === "RANK" ? `RANKS ${m.ranking[0] ?? ""} FIRST` : m.decision}
+        {m.decision !== "RANK" && <span className="text-muted"> · {m.reason_code}</span>}
+      </div>
+      <p className="mt-1 line-clamp-3 text-base leading-snug text-primary/85">{m.reason}</p>
+      {facts.length > 0 && (
+        <div className="mt-1.5 border-t pt-1 font-mono text-xs text-muted">checked{subject ? ` ${subject}` : ""}: {facts.slice(0, 3).join(" · ")}</div>
+      )}
+    </div>
+  );
 }
 
 export default function StoryPage() {
-  const [sub, setSub] = useState<Subsystem>("WEATHER");
-  const [runs, setRuns] = useState<Partial<Record<Subsystem, Run>>>({});
+  const [chapters, setChapters] = useState<(StoryChapter | null)[]>([null, null, null]);
   const [batch, setBatch] = useState<Batch | null>(null);
   const [beat, setBeat] = useState(0);
-  const run = runs[sub] ?? null;
 
   useEffect(() => {
-    SUBSYSTEMS.forEach((s) =>
-      fetch(`/runs/showcase-${s.toLowerCase()}.json`)
+    ["s1", "s2", "s3"].forEach((k, i) =>
+      fetch(`/story/${k}.json`)
         .then((r) => (r.ok ? r.json() : null))
-        .then((j) => j && setRuns((prev) => ({ ...prev, [s]: j }))),
+        .then((j) => j && setChapters((prev) => prev.map((c, n) => (n === i ? j : c)))),
     );
     // Prefer the live-agent batch; fall back to the offline rule-agent batch.
     fetch("/evidence/batch-live.json")
@@ -121,166 +177,247 @@ export default function StoryPage() {
     return () => gsap.ticker.remove(tick);
   });
 
-  const s = run?.scenario;
-  const row = s?.row;
-  const r1 = run?.rounds.find((r) => r.round === 1);
-  const later = run?.rounds.filter((r) => r.round > 1) ?? [];
-  const silo = run?.outcome.baseline_uncoordinated;
+  const jumpTo = (c: number) => {
+    const track = document.getElementById("story-track");
+    if (!track) return;
+    const top = track.offsetTop + (chapterStart(c) + 0.004) * (track.offsetHeight - innerHeight);
+    window.scrollTo({ top, behavior: "smooth" });
+  };
+  const activeChapter = BEATS[beat]?.chapter ?? null;
+  const beatIndex = (c: number, phase: string) => BEATS.findIndex((b) => b.chapter === c && b.phase === phase);
 
   return (
     <main className="relative">
       <div className="fixed inset-0 z-0">
-        <Airfield run={run} />
+        <Airfield chapters={chapters} />
       </div>
+      {/* Keeps the copy readable over the scene; the scene itself is offset to the right. */}
+      <div className="pointer-events-none fixed inset-0 z-10 bg-[linear-gradient(90deg,rgba(9,10,12,0.94)_0%,rgba(9,10,12,0.82)_32%,rgba(9,10,12,0.25)_52%,transparent_62%)]" />
 
-      <header className="fixed inset-x-0 top-0 z-30 border-b bg-carbon/70 backdrop-blur">
-        <div className="mx-auto flex max-w-frame items-center justify-between gap-4 px-4 py-3 md:px-8">
+      <header className="fixed inset-x-0 top-0 z-30 border-b bg-carbon/75 backdrop-blur">
+        <div className="mx-auto flex max-w-frame flex-wrap items-center justify-between gap-3 px-4 py-3 md:px-8">
           <div className="label text-primary">Arrival disruption · 3-agent negotiation</div>
-          <div className="flex items-center gap-1">
-            {SUBSYSTEMS.map((x) => (
+          <nav className="flex flex-wrap items-center gap-1" aria-label="Chapters">
+            {chapters.map((c, i) => (
               <button
-                key={x}
-                onClick={() => setSub(x)}
-                className={`border px-2 py-1 font-mono text-[11px] ${x === sub ? "border-primary text-primary" : "text-muted"}`}
+                key={i}
+                onClick={() => jumpTo(i)}
+                className={`border px-2.5 py-1 font-mono text-xs ${activeChapter === i ? "border-primary text-primary" : "text-muted hover:text-primary"}`}
               >
-                {SUB_LABEL[x]}
+                {i + 1} · {c?.title ?? SUBSYSTEMS[i]}
               </button>
             ))}
-            <Link href="/console" className="ml-2 border border-atc px-2 py-1 font-mono text-[11px] text-atc">
-              Live console →
-            </Link>
-          </div>
+            <Link href="/console" className="ml-2 border border-atc px-2.5 py-1 font-mono text-xs text-atc">Live console →</Link>
+          </nav>
         </div>
-        <div className="h-[2px] bg-tactical">
+        <div className="relative h-[3px] bg-tactical">
           <div className="h-full bg-atc transition-[width] duration-300" style={{ width: `${(beat / (BEATS.length - 1)) * 100}%` }} />
+          {[0, 1, 2].map((c) => (
+            <button
+              key={c}
+              onClick={() => jumpTo(c)}
+              aria-label={`Jump to chapter ${c + 1}`}
+              className={`absolute top-1/2 size-3 -translate-x-1/2 -translate-y-1/2 rounded-full border ${activeChapter !== null && activeChapter >= c ? "border-atc bg-atc" : "border-muted bg-carbon"}`}
+              style={{ left: `${(chapterStart(c) / BEATS[BEATS.length - 1].at) * 100}%` }}
+            />
+          ))}
         </div>
       </header>
 
       <div className="pointer-events-none fixed inset-0 z-20">
         <Panel beat={0} active={beat}>
-          <p data-body className="label mb-4">Station duty manager · arrival hub · today</p>
+          <p data-body className="label mb-4">Station duty manager · arrival hub · real 2015 flights</p>
           <Heading lines={["One late aircraft.", "Three organisations.", "One phone line."]} />
-          <p data-body className="mt-6 max-w-md text-muted">
+          <p data-body className="mt-6 max-w-xl text-lg text-primary/80">
             When weather, a late inbound or a runway closure hits, ATC, the flight crew and ramp control
             renegotiate by phone while the aircraft holds and burns fuel. Here three independent AI agents
             negotiate instead. Code enforces every safety margin. A person approves.
           </p>
+          <div data-body className="mt-8 grid max-w-xl grid-cols-3 gap-2">
+            {chapters.map((c, i) => (
+              <div key={i} className="border bg-carbon/80 p-3">
+                <div className="label">Subsystem {i + 1}</div>
+                <div className="mt-1 text-lg">{c?.title ?? SUBSYSTEMS[i]}</div>
+                <div className="mt-1 text-sm text-muted">{c ? TAGLINE[c.subsystem] : ""}</div>
+              </div>
+            ))}
+          </div>
           <p data-body className="label mt-10">Scroll ↓</p>
         </Panel>
 
-        <Panel beat={1} active={beat}>
-          <Heading lines={["A real flight.", "A real delay."]} />
-          {row && (
-            <Card>
-              <div className="label">US DOT 2015 on-time data · row {s?.row_id}</div>
-              <div className="mt-2 font-mono text-2xl">
-                {String(row.AIRLINE)}{String(row.FLIGHT_NUMBER)} · {String(row.ORIGIN_AIRPORT)} → {String(row.DESTINATION_AIRPORT)}
-              </div>
-              <div className="mt-3 grid grid-cols-3 gap-3 font-mono text-sm">
-                <div><div className="label">Arrival delay</div>{String(row.ARRIVAL_DELAY)} min</div>
-                <div><div className="label">Weather delay</div>{String(row.WEATHER_DELAY)} min</div>
-                <div><div className="label">Late aircraft</div>{String(row.LATE_AIRCRAFT_DELAY)} min</div>
-                <div><div className="label">Date</div>2015-{String(row.MONTH).padStart(2, "0")}-{String(row.DAY).padStart(2, "0")}</div>
-                <div><div className="label">Tail</div>{String(row.TAIL_NUMBER)}</div>
-                <div><div className="label">Distance</div>{String(row.DISTANCE)} mi</div>
-              </div>
-            </Card>
-          )}
-        </Panel>
+        {chapters.map((d, c) => {
+          if (!d) return null;
+          const run = d.live;
+          const s = run.scenario;
+          const r = d.real;
+          const o = run.outcome;
+          const chosen = o.candidate;
+          const date = `${r.DAY} ${MONTHS[Number(r.MONTH) - 1]} 2015`;
+          const delay = d.subsystem === "WEATHER" ? `${r.WEATHER_DELAY} min weather delay` : d.subsystem === "ROUTINE"
+            ? `${r.LATE_AIRCRAFT_DELAY} min late-aircraft delay` : `${r.ARRIVAL_DELAY} min arrival delay`;
+          const r1 = run.rounds.find((x) => x.round === 1);
+          const later = run.rounds.filter((x) => x.round > 1);
+          const plannedBusy = s.ground.gates.find((g) => g.id === s.ground.planned_gate)?.busy?.find(([a, b]) => a <= 2 && b > 2);
+          const silo = o.baseline_uncoordinated;
+          return (
+            <div key={c} className="contents">
+              {/* Title */}
+              <Panel beat={beatIndex(c, "title")} active={beat}>
+                <p data-body className="label mb-4">Subsystem {c + 1} of 3 · {TRIGGER[d.subsystem]}</p>
+                <Heading lines={[`${d.title}.`, TAGLINE[d.subsystem]]} />
+                <Card>
+                  <div className="font-mono text-2xl">
+                    {String(r.AIRLINE)}{String(r.FLIGHT_NUMBER)} into {String(r.DESTINATION_AIRPORT)}<Badge kind="REAL" />
+                  </div>
+                  <p className="mt-2 text-lg text-primary/85">
+                    {date}, {delay}, from {String(r.ORIGIN_AIRPORT)}. US DOT on-time data, row {d.row_id}.
+                  </p>
+                </Card>
+              </Panel>
 
-        <Panel beat={2} active={beat}>
-          <Heading lines={[sub === "EMERGENCY" ? "Runway closed." : sub === "WEATHER" ? "Capacity cut." : "Gate still occupied."]} />
-          {run && (
-            <Card>
-              <div className="label" style={{ color: sub === "EMERGENCY" ? "var(--color-crimson)" : undefined }}>
-                Subsystem · {sub}
-              </div>
-              <p className="mt-2 text-sm">{s?.narrative}</p>
-              <div className="mt-3 grid grid-cols-3 gap-3 font-mono text-sm">
-                <div><div className="label">Arrival cap</div>{s?.runway.arrival_cap_per_hr}/{s?.runway.normal_cap_per_hr} per hr</div>
-                <div><div className="label">Fuel endurance</div>{s?.flight.fuel_endurance_min} min</div>
-                <div><div className="label">Alternate</div>{s?.flight.alternate} (+{s?.flight.alternate_min} min)</div>
-              </div>
-              <SyntheticNote run={run} />
-            </Card>
-          )}
-        </Panel>
+              {/* Disruption */}
+              <Panel beat={beatIndex(c, "disruption")} active={beat}>
+                <Heading lines={[
+                  d.subsystem === "ROUTINE" ? `Gate ${s.ground.planned_gate} is still occupied.`
+                    : d.subsystem === "WEATHER" ? `Arrivals cut to ${s.runway.arrival_cap_per_hr} an hour.` : "Runway closed.",
+                ]} />
+                {d.subsystem === "EMERGENCY" && s.runway.closure && (
+                  <div data-body className="mt-5 inline-block border border-crimson bg-crimson/15 px-3 py-2 font-mono text-base text-crimson">
+                    RUNWAY {s.runway.name} CLOSED · drone sighting · T+{s.runway.closure.start.toFixed(0)} to T+{s.runway.closure.end.toFixed(0)} min<Badge kind="SYNTHETIC" />
+                  </div>
+                )}
+                <Card>
+                  <p className="text-lg text-primary/90">{s.narrative}</p>
+                  <div className="mt-4 grid grid-cols-2 gap-4">
+                    {d.subsystem === "ROUTINE" && (
+                      <>
+                        <Fact label={`Gate ${s.ground.planned_gate} occupied until`} value={plannedBusy ? `T+${plannedBusy[1].toFixed(0)} min` : "—"} kind="SYNTHETIC" />
+                        <Fact label="Ramp crew shift ends" value={`T+${s.ground.crew_shift_end} min`} kind="SYNTHETIC" />
+                        {d.derived.next_leg && (
+                          <Fact label={`Tail ${String(r.TAIL_NUMBER)} next leg`} value={`${d.derived.next_leg.flight} to ${d.derived.next_leg.dest} at ${d.derived.next_leg.dep}`} kind="REAL" />
+                        )}
+                        <Fact label="Turnaround" value={`${s.ground.turnaround_min} min`} kind="SYNTHETIC" />
+                      </>
+                    )}
+                    {d.subsystem === "WEATHER" && (
+                      <>
+                        <Fact label="Arrival rate" value={`${s.runway.normal_cap_per_hr} → ${s.runway.arrival_cap_per_hr}/hr`} kind="DERIVED" />
+                        <Fact
+                          label={`Same-hour arrivals at ${String(r.DESTINATION_AIRPORT)} weather-delayed`}
+                          value={`${d.derived.window_weather_delayed} of ${d.derived.window_arrivals} (${Math.round((d.derived.weather_share ?? 0) * 100)}%)`}
+                          kind="DERIVED"
+                        />
+                        <Fact label="Fuel endurance" value={`${s.flight.fuel_endurance_min} min`} kind="SYNTHETIC" />
+                        <Fact label="Alternate" value={`${s.flight.alternate} (+${s.flight.alternate_min} min)`} kind="SYNTHETIC" />
+                      </>
+                    )}
+                    {d.subsystem === "EMERGENCY" && (
+                      <>
+                        <Fact label="Drones sighted" value="2, near the threshold" kind="SYNTHETIC" />
+                        <Fact label="Fuel endurance" value={`${s.flight.fuel_endurance_min} min`} kind="SYNTHETIC" />
+                        <Fact label="Alternate" value={`${s.flight.alternate} (+${s.flight.alternate_min} min)`} kind="SYNTHETIC" />
+                        <Fact label="Real delay on this row" value={`${r.ARRIVAL_DELAY} min`} kind="REAL" />
+                      </>
+                    )}
+                  </div>
+                  {d.subsystem === "ROUTINE" && chosen && (
+                    <div className="mt-4">
+                      <div className="label">Crew shift clock</div>
+                      <div className="relative mt-2 h-2 overflow-hidden rounded-sm bg-tactical">
+                        <div className="h-full bg-pilot" style={{ width: beat === beatIndex(c, "disruption") ? "100%" : "0%", transition: "width 6s linear" }} />
+                      </div>
+                      <div className="mt-1 font-mono text-xs text-muted">
+                        shift ends T+{s.ground.crew_shift_end} min · agreed plan runs {chosen.metrics.overtime_min} min past it
+                      </div>
+                    </div>
+                  )}
+                </Card>
+              </Panel>
 
-        <Panel beat={3} active={beat} wide>
-          <Heading lines={[`${run?.candidates.total ?? "—"} options.`, `${run?.candidates.feasible ?? "—"} are legal.`]} />
-          {run && (
-            <Card>
-              <p className="mb-3 text-sm text-muted">
-                Code, not an LLM, checks wake separation, fuel reserve, turbulence, runway closure and gate conflicts.
-                Agents only ever see the legal options.
-              </p>
-              <CandidateGrid run={run} highlight={run.outcome.candidate?.id} />
-            </Card>
-          )}
-        </Panel>
+              {/* Validators */}
+              <Panel beat={beatIndex(c, "validators")} active={beat} wide>
+                <Heading lines={[`${run.candidates.total} options.`, `${run.candidates.feasible} are legal.`]} />
+                <Card>
+                  <p className="mb-3 text-lg text-primary/85">
+                    Code, not an LLM, checks every option. Vetoed options are struck out; agents only ever see the legal ones.
+                  </p>
+                  <CandidateGrid run={run} highlight={chosen?.id} />
+                  <div className="mt-3 flex flex-wrap gap-2">
+                    {Object.entries(run.candidates.fail_counts).map(([code, n]) => (
+                      <span key={code} className="border px-2 py-0.5 font-mono text-xs text-muted">{code} × {n}</span>
+                    ))}
+                  </div>
+                </Card>
+              </Panel>
 
-        <Panel beat={4} active={beat} wide>
-          <Heading lines={["Round 1.", "Each side ranks."]} />
-          {r1 && (
-            <div data-body className="mt-6 grid gap-2 md:grid-cols-3">
-              {run && r1.messages.map((m) => {
-                const subject = messageSubject(run, m, null);
-                return <MessageCard key={m.agent} m={m} facts={agentFacts(m.agent, subject)} subject={subject?.id} />;
-              })}
-            </div>
-          )}
-          <p data-body className="label mt-3">Three separate calls. Each agent sees only its own organisation&apos;s data.</p>
-        </Panel>
-
-        <Panel beat={5} active={beat} wide>
-          <Heading lines={["Propose. Counter.", "Three rounds, max."]} />
-          <div data-body className="mt-6 space-y-3">
-            {later.map((r) => (
-              <div key={r.round}>
-                <div className="label mb-1">Round {r.round} · coordinator proposes {r.proposal?.id}</div>
-                <div className="grid gap-2 md:grid-cols-3">
-                  {r.messages.map((m) => <MessageCard key={m.agent} m={m} facts={agentFacts(m.agent, r.proposal)} subject={r.proposal?.id} />)}
+              {/* Negotiation */}
+              <Panel beat={beatIndex(c, "negotiation")} active={beat} wide>
+                <Heading lines={["Three agents.", "Separate calls."]} />
+                <div data-body className="mt-5 space-y-3">
+                  {r1 && (
+                    <div>
+                      <div className="label mb-1">Round 1 · each agent ranks the legal options</div>
+                      <div className="grid gap-2 md:grid-cols-3">
+                        {r1.messages.map((m) => {
+                          const subj = messageSubject(run, m, null);
+                          return <StoryAgentCard key={m.agent} m={m} facts={agentFacts(m.agent, subj)} subject={subj?.id} />;
+                        })}
+                      </div>
+                    </div>
+                  )}
+                  {later.map((rd) => (
+                    <div key={rd.round}>
+                      <div className="label mb-1">Round {rd.round} · coordinator proposes {rd.proposal?.id}</div>
+                      <div className="grid gap-2 md:grid-cols-3">
+                        {rd.messages.map((m) => <StoryAgentCard key={m.agent} m={m} facts={agentFacts(m.agent, rd.proposal)} subject={rd.proposal?.id} />)}
+                      </div>
+                    </div>
+                  ))}
+                  <p className="font-mono text-xs text-muted">
+                    {d.model ?? "rule agents"} · {run.rounds.reduce((n, x) => n + x.messages.length, 0)} separate calls · ${d.cost.usd.toFixed(4)} · {d.latency_s}s · offline rule agents chose {d.offline.outcome.candidate?.id ?? "—"}
+                  </p>
                 </div>
-              </div>
-            ))}
-            {run && run.vetoes.length > 0 && (
-              <p className="font-mono text-xs text-crimson">
-                {run.vetoes.length} veto(es): {run.vetoes[0].agent} named {run.vetoes[0].candidate}, which failed{" "}
-                {Object.values(run.vetoes[0].failed)[0]?.code}
-              </p>
-            )}
-          </div>
-        </Panel>
+              </Panel>
 
-        <Panel beat={6} active={beat} wide>
-          <Heading lines={[run?.outcome.consensus ? "Consensus." : "No consensus: fallback.", "A person approves."]} />
-          {run && (
-            <Card>
-              <LevelBadge run={run} />
-              <div className="mt-4">
-                <PlanTable
-                  plans={[
-                    { label: "Negotiated", c: run.outcome.candidate },
-                    { label: "FCFS", c: run.outcome.baseline_fcfs },
-                    { label: "Siloed today", c: silo ?? null, note: silo ? Object.values(silo.violations).map((v) => v.code).join(", ") || "none" : undefined },
-                  ]}
-                />
-              </div>
-              <div className="mt-4"><HashChain run={run} max={8} /></div>
-            </Card>
-          )}
-        </Panel>
+              {/* Outcome */}
+              <Panel beat={beatIndex(c, "outcome")} active={beat} wide>
+                <Heading lines={[o.consensus ? "Consensus." : `Fallback ${o.level}.`, "A person approves."]} />
+                <Card>
+                  <div className="flex flex-wrap items-center gap-3">
+                    <span className="border px-2 py-1 font-mono text-base" style={{ color: o.level === "L2" ? "var(--color-pilot)" : o.level === "L3" ? "var(--color-crimson)" : "var(--color-ok)" }}>
+                      {o.level} · {LEVEL_TEXT[o.level]}
+                    </span>
+                    <span className="label">{o.rounds_used} rounds</span>
+                  </div>
+                  {chosen && (
+                    <div className="mt-4 grid grid-cols-2 gap-4 md:grid-cols-3">
+                      <Fact label="Revised arrival" value={chosen.t != null ? `${addMin(s.t0_clock, chosen.t)} (T+${chosen.t})` : chosen.id} kind="MODELLED" />
+                      <Fact label="Gate" value={chosen.gate ?? chosen.kind} kind="MODELLED" />
+                      <Fact label="Holding" value={`${chosen.metrics.hold_min} min · ${chosen.metrics.fuel_hold_kg} kg`} kind="MODELLED" />
+                      <Fact label="Missed connections" value={`${chosen.metrics.missed_pax} pax`} kind="MODELLED" />
+                      <Fact label="Crew overtime" value={`${chosen.metrics.overtime_min} min`} kind="MODELLED" />
+                      <Fact label="Siloed plan would break" value={silo ? Object.values(silo.violations).map((v) => v.code).join(", ") || "nothing" : "—"} kind="MODELLED" />
+                    </div>
+                  )}
+                  <div className="mt-5 flex flex-wrap items-center gap-3">
+                    <span className="border border-ok px-3 py-1.5 font-mono text-base text-ok">Duty manager: Approve</span>
+                    <Link href="/console" className="label text-atc">Approve in the live console →</Link>
+                  </div>
+                  <div className="mt-4"><HashChain run={run} max={6} /></div>
+                </Card>
+              </Panel>
+            </div>
+          );
+        })}
 
-        <Panel beat={7} active={beat} wide>
+        <Panel beat={BEATS.length - 1} active={beat} wide>
           <Heading lines={["Tested on many rows,", "not one script."]} />
           {batch && (
             <Card>
-              <table className="w-full font-mono text-xs">
+              <table className="w-full font-mono text-sm">
                 <thead>
                   <tr className="text-left">
-                    <th className="label py-1 font-normal">
-                      {batch.n_per_subsystem} rows each · {batch.mode}{batch.model ? ` · ${batch.model}` : ""}
-                    </th>
+                    <th className="label py-1 font-normal">{batch.n_per_subsystem} rows each · {batch.mode}{batch.model ? ` · ${batch.model}` : ""}</th>
                     {SUBSYSTEMS.map((x) => <th key={x} className="label py-1 text-right font-normal">{x}</th>)}
                   </tr>
                 </thead>
@@ -290,50 +427,48 @@ export default function StoryPage() {
                     ["Mean rounds", (b) => b.mean_rounds],
                     ["Unsafe plans accepted", (b) => b.unsafe_plans_accepted],
                     ["Siloed plans that break a constraint", (b) => `${b.uncoordinated_plans_broken_pct}%`],
-                    ["Diverts (negotiated)", (b) => `${b.divert_pct.neg}%`],
-                    ...(batch.mode === "live"
-                      ? ([["LLM replies replaced by rule agents", (b) => b.llm_stand_ins]] as [string, (b: Batch["subsystems"][Subsystem]) => React.ReactNode][])
-                      : []),
+                    ["LLM replies replaced by rule agents", (b) => b.llm_stand_ins ?? 0],
                   ] as [string, (b: Batch["subsystems"][Subsystem]) => React.ReactNode][]).map(([label, f]) => (
                     <tr key={label} className="border-t">
-                      <td className="py-1 text-muted">{label}</td>
-                      {SUBSYSTEMS.map((x) => <td key={x} className="py-1 text-right">{f(batch.subsystems[x])}</td>)}
+                      <td className="py-1.5 text-muted">{label}</td>
+                      {SUBSYSTEMS.map((x) => <td key={x} className="py-1.5 text-right">{f(batch.subsystems[x])}</td>)}
                     </tr>
                   ))}
                 </tbody>
               </table>
               <p className="label mt-3">MODELLED on synthetic airport state seeded from real DOT rows. Not measured.</p>
               <div className="mt-4 flex gap-2">
-                <Link href="/console" className="border border-atc px-3 py-2 font-mono text-xs text-atc">Run a random row live →</Link>
+                <Link href="/console" className="border border-atc px-3 py-2 font-mono text-sm text-atc">Run a random row live →</Link>
               </div>
             </Card>
           )}
         </Panel>
       </div>
 
-      <div id="story-track" className="relative z-10 h-[900vh]" />
+      <div id="story-track" className="relative z-10" style={{ height: `${BEATS.length * 100}vh` }} />
 
       <section className="relative z-30 border-t bg-carbon">
         <div className="mx-auto grid max-w-frame gap-8 px-4 py-16 md:grid-cols-3 md:px-8">
           <div>
-            <div className="label">Limits</div>
-            <p className="mt-2 text-sm text-muted">
-              Runway, gates, fuel, connections and crew are synthetic, seeded from each row. One flight at a time;
-              the model does not re-sequence the whole arrival bank. Real results need airline and airport feeds.
+            <div className="label">What the AI does</div>
+            <p className="mt-2 text-base text-muted">
+              Three separate Claude calls per round, one per organisation, each with only its own data. They rank
+              the legal options, accept or reject proposals with reason codes, and counter-offer. A coordinator
+              written in code proposes, caps talk at 3 rounds and falls back deterministically.
             </p>
           </div>
           <div>
             <div className="label">Safety split</div>
-            <p className="mt-2 text-sm text-muted">
-              LLMs negotiate trade-offs. Validators decide what is legal, the coordinator caps talk at 3 rounds,
-              and a deterministic fallback decides without consensus. Every message is in a hash-chained log.
+            <p className="mt-2 text-base text-muted">
+              LLMs negotiate trade-offs. Validators decide what is legal and re-check the final plan. Every message
+              is in an HMAC-keyed, hash-chained log, and nothing happens until the duty manager approves.
             </p>
           </div>
           <div>
-            <div className="label">Why the drone case</div>
-            <p className="mt-2 text-sm text-muted">
-              Gatwick, Dec 2018: about 1,000 flights affected over ~33 hours. Munich, Oct 2025: 23 diversions,
-              12 cancellations. The FAA receives more than 100 drone reports near airports every month.
+            <div className="label">Limits</div>
+            <p className="mt-2 text-base text-muted">
+              Runway, gates, fuel, connections and crew are synthetic, seeded from each row. One flight at a time.
+              Drone closures are synthetic. Real results need airline and airport feeds.
             </p>
           </div>
         </div>
